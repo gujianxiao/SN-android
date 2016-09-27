@@ -25,4 +25,7 @@ dependencies {
     compile 'com.android.support:appcompat-v7:23.4.0'
     compile files('libs/BaiduLBS_Android.jar')
     compile files('src/main/jniLibs/BaiduLBS_Android.jar')
+    compile files('src/main/jniLibs/jndn-android-0.9_08a2ed02350e6e8eec52af0d63c0cec4a1652fa7.jar')
+    compile files('libs/jndn-android-0.9.jar')
+    compile files('libs/jndn-xx-util-0.0.1.jar')
 }

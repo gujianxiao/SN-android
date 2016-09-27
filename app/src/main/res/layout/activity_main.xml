@@ -15,4 +15,17 @@
         android:clickable="true"
         />
 
+    <Button
+        android:id="@+id/start_ndn_service"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Begin NDN service"
+        />
+    <Button
+        android:id="@+id/send_Interest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="send Interest"
+        />
+
 </RelativeLayout>
