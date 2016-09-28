@@ -37,6 +37,7 @@ public class MainActivity extends AppCompatActivity{
     private  boolean isFirstLocate = true;
     private Button startNDNService;
     private Button sendInterest;
+    private LatLng latLng;
 
 
 
@@ -46,7 +47,7 @@ public class MainActivity extends AppCompatActivity{
         super.onCreate(savedInstanceState);
         SDKInitializer.initialize(getApplicationContext());
         setContentView(R.layout.activity_main);
-
+        //bind service
         startNDNService=(Button)findViewById(R.id.start_ndn_service);
         sendInterest=(Button)findViewById(R.id.send_Interest);
         startNDNService.setOnClickListener(new View.OnClickListener() {
@@ -105,7 +106,7 @@ public class MainActivity extends AppCompatActivity{
     private void navigateTo(Location location){
         Log.d(TAG,"get into navigateTo");
         if(isFirstLocate){
-            LatLng latLng=new LatLng(location.getLatitude(),location.getLongitude());
+            latLng=new LatLng(location.getLatitude(),location.getLongitude());
             MapStatusUpdate update= MapStatusUpdateFactory.newLatLng(latLng);
             baiduMap.animateMapStatus(update);
             Log.d(TAG,"set zomm to 16");
@@ -165,7 +166,7 @@ public class MainActivity extends AppCompatActivity{
         }
     };
 
-
+    //bind NDN service with main activity;
     private NDN_service.ServiceBinder serviceBinder;
 
     private ServiceConnection NDNServiceConnection = new ServiceConnection(){
@@ -177,7 +178,7 @@ public class MainActivity extends AppCompatActivity{
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             serviceBinder=(NDN_service.ServiceBinder)iBinder;
-            serviceBinder.startBind();
+            serviceBinder.startBind(latLng);
         }
     };
 
