@@ -67,7 +67,7 @@ public class NDN_service extends Service{
         public void onTimeout(Interest interest) {
             callbackCount++;
             Log.i(TAG, "Time out for interest" + interest.getName().toUri());
-            Log.i(TAG, "register in gateway failed!");
+            //Log.i(TAG, "register in gateway failed!");
         }
     }
     //dealing with incoming Interest and package the data then send back to gateway
@@ -79,8 +79,10 @@ public class NDN_service extends Service{
             Dealing with interest and package the data here...
              */
             try {
-
-                Data backData=new Data();
+                Name tempName=interest.getName();
+                Data backData=new Data(tempName);
+                Blob blob=new Blob("sensor info from device"+deviceLatLng.latitude+deviceLatLng.longitude);
+                backData.setContent(blob);
                 face.putData(backData);
 
             }
@@ -204,7 +206,7 @@ public class NDN_service extends Service{
             if(registerSignal==0){
                 //Face faceListen=new Face("gatewayIP");
                 incomingInterest incomI= new incomingInterest();
-                onregisterfailed regfailed=new onregisterfailed();
+                //onregisterfailed regfailed=new onregisterfailed();
 
                 double lat=deviceLatLng.latitude;
                 double lng=deviceLatLng.longitude;
@@ -212,12 +214,14 @@ public class NDN_service extends Service{
                 Name incomInName=new Name("wifi/"+lat+"/"+lng);
                 Log.i(TAG, "name initiate");
                 try{
-                    Log.i(TAG, "keyChain initiate");
-                    KeyChain keyChain=new KeyChain();
-                    Log.i(TAG, "keyChain initiate success");
-                    face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());
-                    Log.i(TAG, "sign info initiate success");
-                    face.registerPrefix(incomInName,incomI,regfailed);
+                    Log.i(TAG, "setInterestFilter initiate...");
+                    face.setInterestFilter(incomInName,incomI);
+                    Log.i(TAG, "initiate setInterestFilter success!");
+//                    KeyChain keyChain=new KeyChain();
+//                    Log.i(TAG, "keyChain initiate success");
+//                    face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());
+//                    Log.i(TAG, "sign info initiate success");
+//                    face.registerPrefix(incomInName,incomI,regfailed);
                     new faceProcessEvent().execute();
                 }
                 catch (Exception e){

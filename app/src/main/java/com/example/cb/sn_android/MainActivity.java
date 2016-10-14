@@ -53,9 +53,11 @@ public class MainActivity extends AppCompatActivity{
         startNDNService.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent startIntent = new Intent (MainActivity.this, NDN_service.class);
-                bindService(startIntent,NDNServiceConnection,BIND_AUTO_CREATE);
-                startService(startIntent);
+                Intent startNDNIntent = new Intent (MainActivity.this, NDN_service.class);
+                bindService(startNDNIntent,NDNServiceConnection,BIND_AUTO_CREATE);
+                startService(startNDNIntent);
+                Intent startSensoryIntent=new Intent(MainActivity.this,Sensory_service.class);
+                bindService(startSensoryIntent,SensoryServiceConnection,BIND_AUTO_CREATE);
                 Log.i(TAG, "start NDN service");
             }
         });
@@ -181,6 +183,22 @@ public class MainActivity extends AppCompatActivity{
             serviceBinder.startBind(latLng);
         }
     };
+
+    //bidn sensory service with main activity;
+    private Sensory_service.ServiceBinder SensoryServiceBinder;
+    private ServiceConnection SensoryServiceConnection=new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            SensoryServiceBinder=(Sensory_service.ServiceBinder)iBinder;
+            SensoryServiceBinder.startBind();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
+        }
+    };
+
 
 
 
