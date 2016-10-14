@@ -10,6 +10,7 @@ android {
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
+        multiDexEnabled true
     }
     buildTypes {
         release {
@@ -24,6 +25,10 @@ android {
         main.java.exclude '**/ChronoSync2013.java'
         main.java.exclude '**/SyncStateProto.java'
         main.java.exclude '**/AsyncTcpTransport.java'
+    }
+    dexOptions {
+        javaMaxHeapSize "4g"
+        preDexLibraries = false
     }
 
 }

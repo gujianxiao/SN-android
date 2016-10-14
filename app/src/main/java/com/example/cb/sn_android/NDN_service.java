@@ -97,7 +97,7 @@ public class NDN_service extends Service{
     private class onregisterfailed implements OnRegisterFailed{
         @Override
         public void onRegisterFailed(Name name) {
-            Log.i(TAG, "register name prefix"+name.toUri());
+            Log.i(TAG, "register failed of name prefix"+name.toUri());
         }
     }
 
@@ -109,6 +109,7 @@ public class NDN_service extends Service{
         super.onCreate();
         //face = new Face(HOST,PORT);//temporary face name of gateway
         face = new Face();//temporary face name of gateway
+
         NetThread thread = new NetThread();
 
         thread.start();
@@ -209,14 +210,19 @@ public class NDN_service extends Service{
                 double lng=deviceLatLng.longitude;
                 //set filter of this device
                 Name incomInName=new Name("wifi/"+lat+"/"+lng);
+                Log.i(TAG, "name initiate");
                 try{
+                    Log.i(TAG, "keyChain initiate");
                     KeyChain keyChain=new KeyChain();
+                    Log.i(TAG, "keyChain initiate success");
                     face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());
+                    Log.i(TAG, "sign info initiate success");
                     face.registerPrefix(incomInName,incomI,regfailed);
                     new faceProcessEvent().execute();
                 }
                 catch (Exception e){
-                    Log.e(TAG, "register prefix failed in device NFD");
+                    e.printStackTrace();
+                    Log.e(TAG, "register prefix failed in device NFD "+e.getMessage());
                 }
 
                 //face.setInterestFilter(new Name("/wifi/location/"),incomI);
@@ -278,6 +284,7 @@ public class NDN_service extends Service{
         public void run() {
 
             try {
+
 
                 Log.i(TAG, "try to express Interest");
                 try {
