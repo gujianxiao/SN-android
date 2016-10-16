@@ -47,6 +47,13 @@ public class MainActivity extends AppCompatActivity{
         super.onCreate(savedInstanceState);
         SDKInitializer.initialize(getApplicationContext());
         setContentView(R.layout.activity_main);
+        Intent intent=getIntent();
+        String userName=intent.getStringExtra("userName");
+        Log.i(TAG, "get user name:"+userName);
+        String serverAddress=intent.getStringExtra("serverAddress");
+        Log.i(TAG, "get server address:"+serverAddress);
+
+
         //bind service
         startNDNService=(Button)findViewById(R.id.start_ndn_service);
         sendInterest=(Button)findViewById(R.id.send_Interest);
@@ -56,15 +63,18 @@ public class MainActivity extends AppCompatActivity{
                 Intent startNDNIntent = new Intent (MainActivity.this, NDN_service.class);
                 bindService(startNDNIntent,NDNServiceConnection,BIND_AUTO_CREATE);
                 startService(startNDNIntent);
-                Intent startSensoryIntent=new Intent(MainActivity.this,Sensory_service.class);
-                bindService(startSensoryIntent,SensoryServiceConnection,BIND_AUTO_CREATE);
                 Log.i(TAG, "start NDN service");
+
             }
         });
         sendInterest.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 //send interest service here;
+                Intent startSensoryIntent=new Intent(MainActivity.this,Sensory_service.class);
+                bindService(startSensoryIntent,SensoryServiceConnection,BIND_AUTO_CREATE);
+                startService(startSensoryIntent);
+                Log.i(TAG, "start sensory service");
             }
         });
 

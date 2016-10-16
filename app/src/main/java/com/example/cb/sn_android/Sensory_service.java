@@ -45,6 +45,7 @@ public class Sensory_service extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.i(TAG, "onCreate: create sensory service!");
         sensorManager=(SensorManager)getSystemService(Context.SENSOR_SERVICE);
         light =sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         temperature=sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
@@ -57,7 +58,7 @@ public class Sensory_service extends Service {
 
     public class ServiceBinder extends Binder{
         public void startBind(){
-            Log.i(TAG, "Start binding...success!");
+            Log.i(TAG, "Start binding sensory service...success!");
         }
     }
 

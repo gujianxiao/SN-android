@@ -1,7 +1,12 @@
 package com.example.cb.sn_android;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Handler;
@@ -48,6 +53,36 @@ public class NDN_service extends Service{
     private ServiceBinder serviceBinder=new ServiceBinder();
     private String HOST="10.103.242.144";
     private int PORT=6353;
+
+
+
+
+    private SensorManager sensorManager;
+    private Sensor light;
+    private Sensor temperature;
+    private Sensor accelerometer;
+    private String sensorValue;
+//    private SensorEventListener listener;
+private SensorEventListener listener=new SensorEventListener() {
+    @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        float value=sensorEvent.values[0];
+        Log.i(TAG, "onSensorChanged: value is:"+value);
+        sensorValue=Float.toString(value);
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
+    }
+};
+
+
+
+
+
+
+
     // dealing with come back data and time out
     private class incomingData implements OnData,OnTimeout{
 
@@ -79,11 +114,20 @@ public class NDN_service extends Service{
             Dealing with interest and package the data here...
              */
             try {
+                sensorManager=(SensorManager)getSystemService(Context.SENSOR_SERVICE);
+                light =sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+                temperature=sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
+                accelerometer=sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+                sensorManager.registerListener(listener,light,SensorManager.SENSOR_DELAY_UI);
+
                 Name tempName=interest.getName();
                 Data backData=new Data(tempName);
-                Blob blob=new Blob("sensor info from device"+deviceLatLng.latitude+deviceLatLng.longitude);
+                Blob blob=new Blob("sensor info from device"+deviceLatLng.latitude+deviceLatLng.longitude+" light is"+sensorValue);
                 backData.setContent(blob);
                 face.putData(backData);
+                if (sensorManager!=null){
+                    sensorManager.unregisterListener(listener);
+                }
 
             }
             catch (Exception e){
@@ -199,7 +243,7 @@ public class NDN_service extends Service{
     public class ServiceBinder extends Binder {
         public void startBind(LatLng ll) {
             deviceLatLng=ll;
-            Log.i(TAG, "Start binding...success!");
+            Log.i(TAG, "Start binding NDN service...success!");
             Log.i(TAG, "get latlng argument:"+deviceLatLng.toString());
 
             //register device success
@@ -367,3 +411,5 @@ public class NDN_service extends Service{
         return serviceBinder;
     }
 }
+
+
