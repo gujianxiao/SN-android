@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity{
     private Button startNDNService;
     private Button sendInterest;
     private LatLng latLng;
+    String serverAddress;
 
 
 
@@ -50,7 +51,7 @@ public class MainActivity extends AppCompatActivity{
         Intent intent=getIntent();
         String userName=intent.getStringExtra("userName");
         Log.i(TAG, "get user name:"+userName);
-        String serverAddress=intent.getStringExtra("serverAddress");
+        serverAddress=intent.getStringExtra("serverAddress");
         Log.i(TAG, "get server address:"+serverAddress);
 
 
@@ -190,7 +191,7 @@ public class MainActivity extends AppCompatActivity{
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             serviceBinder=(NDN_service.ServiceBinder)iBinder;
-            serviceBinder.startBind(latLng);
+            serviceBinder.startBind(latLng,serverAddress);
         }
     };
 
