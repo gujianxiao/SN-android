@@ -10,7 +10,7 @@ android {
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
-        multiDexEnabled true
+//        multiDexEnabled true
     }
     buildTypes {
         release {
@@ -42,4 +42,5 @@ dependencies {
     compile files('src/main/jniLibs/sqlite-jdbc-3.8.7.jar')
     compile 'com.android.support:appcompat-v7:23.4.0'
     compile 'com.android.support:design:23.4.0'
+    compile files('src/main/jniLibs/protobuf-java-2.6.1.jar')
 }

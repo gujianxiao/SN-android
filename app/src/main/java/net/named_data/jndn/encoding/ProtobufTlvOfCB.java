@@ -46,7 +46,7 @@ import net.named_data.jndn.util.Blob;
  * Protobuf has no "outer" message type, so you need to put your TLV message
  * inside an outer "typeless" message.
  */
-public class ProtobufTlv {
+public class ProtobufTlvOfCB {
   /**
    * Encode the Protobuf message object as NDN-TLV.
    * @param message The Protobuf message object. This calls

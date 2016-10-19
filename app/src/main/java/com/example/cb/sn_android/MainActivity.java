@@ -217,6 +217,9 @@ public class MainActivity extends AppCompatActivity{
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        unbindService(NDNServiceConnection);
+        unbindService(SensoryServiceConnection);
         baiduMap.setMyLocationEnabled(false);
         mapView.onDestroy();
         if(locationManager!=null){

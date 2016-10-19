@@ -10,6 +10,8 @@ import android.hardware.SensorManager;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
+import android.os.StrictMode;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.baidu.mapapi.model.LatLng;
@@ -29,7 +31,7 @@ import net.named_data.jndn.OnData;
 import net.named_data.jndn.OnInterestCallback;
 import net.named_data.jndn.OnRegisterFailed;
 import net.named_data.jndn.OnTimeout;
-import net.named_data.jndn.encoding.ProtobufTlv;
+import net.named_data.jndn.encoding.ProtobufTlvOfCB;
 import net.named_data.jndn.security.KeyChain;
 import net.named_data.jndn.security.KeyType;
 import net.named_data.jndn.security.identity.IdentityManager;
@@ -52,8 +54,8 @@ import java.nio.ByteBuffer;
 public class NDN_service extends Service{
     private static final String TAG = "ndn-service";
     private Face face;
-    String registerName = "wifi/location/ID";
-    Name deviceName= new Name(registerName);
+//    String registerName;
+    Name deviceName;
     incomingData incomD = new incomingData();
     public int callbackCount= 0;
     private  int registerSignal=0;
@@ -161,12 +163,21 @@ private SensorEventListener listener=new SensorEventListener() {
     @Override
     public void onCreate(){
         super.onCreate();
+        //operate network in main not in Asyntask;
+        StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads().detectDiskWrites().detectNetwork()
+                .penaltyLog().build());
+        StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+                .detectLeakedSqlLiteObjects().detectLeakedClosableObjects()
+                .penaltyLog().penaltyDeath().build());
+
+
+
+
         //face = new Face(HOST,PORT);//temporary face name of gateway
         face = new Face();//temporary face name of gateway
 
-        NetThread thread = new NetThread();
 
-        thread.start();
         /*String registerName="wifi/location/ID";
         Name deviceName=new Name(registerName);
         incomingData incomD=new incomingData();*/
@@ -365,13 +376,14 @@ private SensorEventListener listener=new SensorEventListener() {
 
     public  void registerRouteInNFD(Name name, String faceUri){
         try {
-            final Name prefix = new Name("/nfd/edu/ucla/remap/test");
+            Log.i(TAG, "registerRouteInNFD: begin...");
+            final Name prefix = name;
             // Route to aleph.ndn.ucla.edu.  Have to use the canonical name with
             // an IP address and port.
-            final String uri = "udp4://128.97.98.7:6363";
+            final String uri = faceUri;
 
             // The default Face connects to the local NFD.
-            final Face face = new Face();
+//            final Face face = new Face();
 
             // For now, when setting face.setCommandSigningInfo, use a key chain with
             //   a default private key instead of the system default key chain. This
@@ -403,7 +415,7 @@ private SensorEventListener listener=new SensorEventListener() {
             FaceQueryFilterProto.FaceQueryFilterMessage.FaceQueryFilter.Builder filterBuilder =
                     builder.addFaceQueryFilterBuilder();
             filterBuilder.setUri(uri);
-            Blob encodedFilter = ProtobufTlv.encode(builder.build());
+            Blob encodedFilter = ProtobufTlvOfCB.encode(builder.build());
 
             Interest interest = new Interest(new Name("/localhost/nfd/faces/query"));
             interest.getName().append(encodedFilter);
@@ -418,7 +430,7 @@ private SensorEventListener listener=new SensorEventListener() {
                             new SegmentFetcher.OnError() {
                                 public void onError(SegmentFetcher.ErrorCode errorCode, String message) {
                                     enabled[0] = false;
-                                    System.out.println(message);
+                                    Log.i(TAG,message);
                                 }});
 
             // Loop calling processEvents until a callback sets enabled[0] = false.
@@ -431,7 +443,8 @@ private SensorEventListener listener=new SensorEventListener() {
             }
         }
         catch (Exception e) {
-            System.out.println("exception: " + e.getMessage());
+            Log.e(TAG,"exception in RegisterRouteInNFD: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -458,7 +471,7 @@ private SensorEventListener listener=new SensorEventListener() {
                 // Encode the ControlParameters.
                 ControlParametersProto.ControlParametersTypes.ControlParametersMessage.Builder builder = ControlParametersProto.ControlParametersTypes.ControlParametersMessage.newBuilder();
                 builder.getControlParametersBuilder().setUri(uri);
-                Blob encodedControlParameters = ProtobufTlv.encode(builder.build());
+                Blob encodedControlParameters = ProtobufTlvOfCB.encode(builder.build());
 
                 Interest interest = new Interest(new Name("/localhost/nfd/faces/create"));
                 interest.getName().append(encodedControlParameters);
@@ -475,21 +488,22 @@ private SensorEventListener listener=new SensorEventListener() {
                                 new OnTimeout() {
                                     public void onTimeout(Interest interest) {
                                         enabled[0] = false;
-                                        System.out.println("Face create command timed out.");
+                                        Log.i(TAG,"Face create command timed out.");
                                     }});
             }
             else {
                 FaceStatusProto.FaceStatusMessage.Builder decodedFaceStatus = FaceStatusProto.FaceStatusMessage.newBuilder();
-                ProtobufTlv.decode(decodedFaceStatus, encodedFaceStatus);
+                ProtobufTlvOfCB.decode(decodedFaceStatus, encodedFaceStatus);
 
                 long faceId = decodedFaceStatus.getFaceStatus(0).getFaceId();
 
-                System.out.println("Found face ID " + faceId);
+                Log.i(TAG,"Found face ID " + faceId);
                 registerRoute(prefix, faceId, face, enabled);
             }
         }
         catch (Exception e) {
-            System.out.println("exception: " + e.getMessage());
+            Log.e(TAG,"exception: processFaceStatus " + e.getMessage());
+            e.printStackTrace();
             enabled[0] = false;
         }
     }
@@ -511,32 +525,33 @@ private SensorEventListener listener=new SensorEventListener() {
         try {
             ControlParametersProto.ControlParametersTypes.ControlParametersResponseMessage.Builder decodedControlResponse =
                     ControlParametersProto.ControlParametersTypes.ControlParametersResponseMessage.newBuilder();
-            ProtobufTlv.decode(decodedControlResponse, encodedControlResponse);
+            ProtobufTlvOfCB.decode(decodedControlResponse, encodedControlResponse);
             ControlParametersProto.ControlParametersTypes.ControlParametersResponse controlResponse =
                     decodedControlResponse.getControlResponse();
 
             final int lowestErrorCode = 400;
             if (controlResponse.getStatusCode() >= lowestErrorCode) {
-                System.out.println
-                        ("Face create command got error, code " + controlResponse.getStatusCode() +
+                Log.e
+                        (TAG,"Face create command got error, code " + controlResponse.getStatusCode() +
                                 ": " + controlResponse.getStatusText());
                 enabled[0] = false;
                 return;
             }
             if (controlResponse.getControlParametersCount() != 1) {
-                System.out.println
-                        ("Face create command response does not have one ControlParameters");
+                Log.e
+                        (TAG,"Face create command response does not have one ControlParameters");
                 enabled[0] = false;
                 return;
             }
 
             long faceId = controlResponse.getControlParameters(0).getFaceId();
 
-            System.out.println("Created face ID " + faceId);
+            Log.i(TAG,"Created face ID " + faceId);
             registerRoute(prefix, faceId, face, enabled);
         }
         catch (Exception e) {
-            System.out.println("exception: " + e.getMessage());
+            Log.e(TAG,"exception: processCreateFaceResponse " + e.getMessage());
+            e.printStackTrace();
             enabled[0] = false;
         }
     }
@@ -568,7 +583,7 @@ private SensorEventListener listener=new SensorEventListener() {
             builder.getControlParametersBuilder().setOrigin(origin);
             builder.getControlParametersBuilder().setCost(cost);
             builder.getControlParametersBuilder().setFlags(flags);
-            Blob encodedControlParameters = ProtobufTlv.encode(builder.build());
+            Blob encodedControlParameters = ProtobufTlvOfCB.encode(builder.build());
 
             Interest interest = new Interest(new Name("/localhost/nfd/rib/register"));
             interest.getName().append(encodedControlParameters);
@@ -586,11 +601,12 @@ private SensorEventListener listener=new SensorEventListener() {
                             new OnTimeout() {
                                 public void onTimeout(Interest interest) {
                                     enabled[0] = false;
-                                    System.out.println("Register route command timed out.");
+                                    Log.i(TAG,"Register route command timed out.");
                                 }});
         }
         catch (Exception e) {
-            System.out.println("exception: " + e.getMessage());
+            Log.e(TAG,"exception: registerRoute " + e.getMessage());
+            e.printStackTrace();
             enabled[0] = false;
         }
     }
@@ -608,36 +624,37 @@ private SensorEventListener listener=new SensorEventListener() {
         try {
             ControlParametersProto.ControlParametersTypes.ControlParametersResponseMessage.Builder decodedControlResponse =
                     ControlParametersProto.ControlParametersTypes.ControlParametersResponseMessage.newBuilder();
-            ProtobufTlv.decode(decodedControlResponse, encodedControlResponse);
+            ProtobufTlvOfCB.decode(decodedControlResponse, encodedControlResponse);
             ControlParametersProto.ControlParametersTypes.ControlParametersResponse controlResponse =
                     decodedControlResponse.getControlResponse();
 
             final int lowestErrorCode = 400;
             if (controlResponse.getStatusCode() >= lowestErrorCode) {
-                System.out.println
-                        ("Face create command got error, code " + controlResponse.getStatusCode() +
+                Log.e
+                        (TAG,"Face create command got error, code " + controlResponse.getStatusCode() +
                                 ": " + controlResponse.getStatusText());
                 return;
             }
             if (controlResponse.getControlParametersCount() != 1) {
-                System.out.println
-                        ("Face create command response does not have one ControlParameters");
+                Log.e
+                        (TAG,"Face create command response does not have one ControlParameters");
                 return;
             }
 
             // Success. Print the ControlParameters response.
             ControlParametersProto.ControlParametersTypes.ControlParameters controlParameters =
                     controlResponse.getControlParameters(0);
-            System.out.println
-                    ("Successful in name registration: ControlParameters(Name: " +
-                            ProtobufTlv.toName(controlParameters.getName()).toUri() +
+            Log.i
+                    (TAG,"Successful in name registration: ControlParameters(Name: " +
+                            ProtobufTlvOfCB.toName(controlParameters.getName()).toUri() +
                             ", FaceId: " + controlParameters.getFaceId() +
                             ", Origin: " + controlParameters.getOrigin() +
                             ", Cost: " + controlParameters.getCost() +
                             ", Flags: " + controlParameters.getFlags() + ")");
         }
         catch (Exception e) {
-            System.out.println("exception: " + e.getMessage());
+            Log.e(TAG,"exception: processRegisterResponse" + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -675,10 +692,14 @@ private SensorEventListener listener=new SensorEventListener() {
 
 
             registerRouteInNFD(incomInName,uri);
+            
             Log.i(TAG, "register route in NFD success!!");
 
+            deviceName=new Name("wifi/"+lat+"/"+lng+"/registerInGateway");
 
+            NetThread thread = new NetThread();
 
+            thread.start();
 
 
             //register device success
