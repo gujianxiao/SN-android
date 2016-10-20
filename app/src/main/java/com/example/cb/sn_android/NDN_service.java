@@ -54,7 +54,7 @@ import java.nio.ByteBuffer;
 public class NDN_service extends Service{
     private static final String TAG = "ndn-service";
     private Face face;
-//    String registerName;
+    String registerUri;
     Name deviceName;
     incomingData incomD = new incomingData();
     public int callbackCount= 0;
@@ -102,7 +102,7 @@ private SensorEventListener listener=new SensorEventListener() {
             Log.i(TAG, "Got data packet with name" + data.getName().toUri());
             String msg=data.getContent().toString();
             if(msg!=null){
-                Log.i(TAG, "onData: "+msg+"register success!");
+                Log.i(TAG, "onData: "+msg+" register success!");
                 registerSignal=1;
             }
 
@@ -673,7 +673,7 @@ private SensorEventListener listener=new SensorEventListener() {
             deviceLatLng=ll;
             HOST=serverAddress;
             //set HOST uri;
-            String uri = "udp4://"+HOST+":6363";
+            registerUri= "udp4://"+HOST+":6363";
             Log.i(TAG, "Start binding NDN service...success!");
             Log.i(TAG, "get latlng argument:"+deviceLatLng.toString());
             Log.i(TAG, "get serverAddress argument:"+HOST);
@@ -687,15 +687,16 @@ private SensorEventListener listener=new SensorEventListener() {
             double lat=deviceLatLng.latitude;
             double lng=deviceLatLng.longitude;
             //set filter of this device
-            Name incomInName=new Name("wifi/"+lat+"/"+lng);
+            deviceName=new Name("wifi/"+lat+"/"+lng);
+//            Name incomInName=new Name(deviceName);
             Log.i(TAG, "name initiate");
 
+            //register route in NFD
 
-            registerRouteInNFD(incomInName,uri);
             
-            Log.i(TAG, "register route in NFD success!!");
 
-            deviceName=new Name("wifi/"+lat+"/"+lng+"/registerInGateway");
+
+
 
             NetThread thread = new NetThread();
 
@@ -707,7 +708,7 @@ private SensorEventListener listener=new SensorEventListener() {
 
                 try{
                     Log.i(TAG, "setInterestFilter initiate...");
-                    face.setInterestFilter(incomInName,incomI);
+                    face.setInterestFilter(deviceName,incomI);
                     Log.i(TAG, "initiate setInterestFilter success!");
 //                    KeyChain keyChain=new KeyChain();
 //                    Log.i(TAG, "keyChain initiate success");
@@ -781,6 +782,9 @@ private SensorEventListener listener=new SensorEventListener() {
 
             try {
 
+
+                registerRouteInNFD(deviceName,registerUri);
+                Log.i(TAG, "register route in NFD success!!");
 
                 Log.i(TAG, "try to express Interest");
                 try {

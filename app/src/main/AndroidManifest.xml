@@ -47,7 +47,8 @@
             android:name="com.baidu.lbsapi.API_KEY"
             android:value="inNysBlGk1EjFEecMUkMFkRMnHmStn8O" />
 
-        <activity android:name=".LoginActivity">
+        <activity android:name=".MainActivityV2"
+                    android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -59,7 +60,18 @@
 
         <activity
             android:name=".MainActivity"
-            android:label="SN-android"></activity>
+            android:label="SN-android" />
+
+        <activity
+            android:name=".LoginActivity"
+            android:label="@string/title_activity_main_activity_v2"
+            android:theme="@style/AppTheme.NoActionBar">
+
+
+
+
+
+        </activity>
     </application>
 
 </manifest>
