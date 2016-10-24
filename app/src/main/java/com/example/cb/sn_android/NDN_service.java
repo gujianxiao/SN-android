@@ -11,6 +11,7 @@ import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.StrictMode;
+import android.support.annotation.IntegerRes;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -46,6 +47,7 @@ import net.named_data.jndn.util.SegmentFetcher;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 
 /**
  * Created by cb on 16-9-26.NDN_Servie class provide NDN service for SN-android. 
@@ -86,7 +88,46 @@ private SensorEventListener listener=new SensorEventListener() {
 
     }
 };
+    public class Location{
+        private int latitude;
+        private int longitude;
 
+        public Location(int lat, int lng){
+            latitude=lat;
+            longitude=lng;
+        }
+
+        public int getLatitude(){
+           return latitude;
+        }
+
+        public int getLongitude(){
+            return longitude;
+        }
+    }
+
+    HashMap<Integer,Integer> topoBase=new HashMap<>();
+    public void initiateTopo(String msg){
+        Log.i(TAG, "initiateTopo...");
+        String topoSet[]=msg.split("\\$+");
+        for(String topo:topoSet){
+            String temp[]=topo.split("->");
+            topoBase.put(Integer.parseInt(temp[0]),Integer.parseInt(temp[1]));
+            Log.i(TAG, "update topo base "+Integer.parseInt(temp[0])+"to "+Integer.parseInt(temp[1]));
+        }
+    }
+    HashMap<Integer,Location> locationBase=new HashMap<>();
+    public void initiateLocation(String msg){
+        Log.i(TAG, "initiateLocation...");
+        String locationSet[]=msg.split("\\$+");
+        for(String location:locationSet){
+            String temp[]=location.split("->|\\(|\\)|,");
+            Location tempLocation=new Location(Integer.parseInt(temp[2]),Integer.parseInt(temp[3]));
+            locationBase.put(Integer.parseInt(temp[0]),tempLocation);
+            Log.i(TAG, "update location base "+String.valueOf(temp[0])+"to "+locationBase.get(Integer.parseInt(temp[0])).toString());
+        }
+
+    }
 
 
 
@@ -99,11 +140,23 @@ private SensorEventListener listener=new SensorEventListener() {
         @Override
         public void onData(Interest interest, Data data) {
             callbackCount++;
-            Log.i(TAG, "Got data packet with name" + data.getName().toUri());
+            Log.i(TAG, "Got data packet with name:" + data.getName().toUri());
             String msg=data.getContent().toString();
             if(msg!=null){
-                Log.i(TAG, "onData: "+msg+" register success!");
-                registerSignal=1;
+                Log.i(TAG, "onData: "+msg);
+                String tempName= data.getName().toString();
+                if (tempName.equals("/wsn/topo")) {
+                    initiateTopo(msg);
+                }
+                else if (tempName.equals("/wsn/location")){
+                    initiateLocation(msg);
+                }
+                else {
+                    Log.i(TAG, "this Data is not topo or location");
+                }
+
+
+//                registerSignal=1;
             }
 
         }
@@ -111,7 +164,7 @@ private SensorEventListener listener=new SensorEventListener() {
         @Override
         public void onTimeout(Interest interest) {
             callbackCount++;
-            Log.i(TAG, "Time out for interest" + interest.getName().toUri());
+            Log.i(TAG, "Time out for interest:" + interest.getName().toUri());
             //Log.i(TAG, "register in gateway failed!");
         }
     }
@@ -781,18 +834,27 @@ private SensorEventListener listener=new SensorEventListener() {
         public void run() {
 
             try {
+                Log.i(TAG, "Run NetThread: construct /wsn/ prefix ");
+                Name Request=new Name("/wsn/");
+                Name topoRequest=new Name("/wsn/topo");
 
-
+                Name locationRequest =new Name("/wsn/location");
+                //use /wsn/topo and /wsn/location to initiate on map and  use /wifi to register in remote NFD
+                registerRouteInNFD(Request,registerUri);
                 registerRouteInNFD(deviceName,registerUri);
+
                 Log.i(TAG, "register route in NFD success!!");
 
                 Log.i(TAG, "try to express Interest");
                 try {
+                    face.expressInterest(locationRequest, incomD, incomD);
+                    Log.i(TAG, "Express name " + locationRequest.toUri());
+                    face.expressInterest(topoRequest, incomD, incomD);
+                    Log.i(TAG, "Express name " + topoRequest.toUri());
                     face.expressInterest(deviceName, incomD, incomD);
+                    Log.i(TAG, "Express name " + deviceName.toUri());
 
-                        Log.i(TAG, "Express name " + deviceName.toUri());
-
-                        while (callbackCount< 1) {
+                        while (callbackCount< 3) {
 
                             face.processEvents();
 

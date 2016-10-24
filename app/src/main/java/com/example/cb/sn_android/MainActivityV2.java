@@ -1,11 +1,15 @@
 package com.example.cb.sn_android;
 
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.util.Log;
@@ -18,13 +22,21 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
 import android.widget.Toast;
 
+import com.baidu.location.BDLocation;
+import com.baidu.location.BDLocationListener;
+import com.baidu.location.LocationClient;
+import com.baidu.location.LocationClientOption;
+import com.baidu.location.Poi;
 import com.baidu.mapapi.SDKInitializer;
 import com.baidu.mapapi.map.BaiduMap;
+import com.baidu.mapapi.map.BitmapDescriptorFactory;
 import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
+import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
 
@@ -41,18 +53,170 @@ public class MainActivityV2 extends AppCompatActivity
     private LocationManager locationManager;
     private String provider;
     private  boolean isFirstLocate = true;
+
+    private Button startNDNService;
+    private Button sendInterest;
+
     private LatLng latLng;
+    String serverAddress;
+
+    public LocationClient mLocationClient = null;
+    public BDLocationListener myListener = new MyLocationListener();
+    public BDLocation BaiduLocation;
+
+    public class MyLocationListener implements BDLocationListener {
+
+        @Override
+        public void onReceiveLocation(BDLocation location) {
+            //Receive Location
+            BaiduLocation=location;
+
+            StringBuffer sb = new StringBuffer(256);
+            sb.append("time : ");
+            sb.append(location.getTime());
+            sb.append("\nerror code : ");
+            sb.append(location.getLocType());
+            sb.append("\nlatitude : ");
+            sb.append(location.getLatitude());
+            sb.append("\nlontitude : ");
+            sb.append(location.getLongitude());
+            sb.append("\nradius : ");
+            sb.append(location.getRadius());
+            if (location.getLocType() == BDLocation.TypeGpsLocation) {// GPS定位结果
+                sb.append("\nspeed : ");
+                sb.append(location.getSpeed());// 单位：公里每小时
+                sb.append("\nsatellite : ");
+                sb.append(location.getSatelliteNumber());
+                sb.append("\nheight : ");
+                sb.append(location.getAltitude());// 单位：米
+                sb.append("\ndirection : ");
+                sb.append(location.getDirection());// 单位度
+                sb.append("\naddr : ");
+                sb.append(location.getAddrStr());
+                sb.append("\ndescribe : ");
+                sb.append("gps定位成功");
+
+            } else if (location.getLocType() == BDLocation.TypeNetWorkLocation) {// 网络定位结果
+                sb.append("\naddr : ");
+                sb.append(location.getAddrStr());
+                //运营商信息
+                sb.append("\noperationers : ");
+                sb.append(location.getOperators());
+                sb.append("\ndescribe : ");
+                sb.append("网络定位成功");
+            } else if (location.getLocType() == BDLocation.TypeOffLineLocation) {// 离线定位结果
+                sb.append("\ndescribe : ");
+                sb.append("离线定位成功，离线定位结果也是有效的");
+            } else if (location.getLocType() == BDLocation.TypeServerError) {
+                sb.append("\ndescribe : ");
+                sb.append("服务端网络定位失败，可以反馈IMEI号和大体定位时间到loc-bugs@baidu.com，会有人追查原因");
+            } else if (location.getLocType() == BDLocation.TypeNetWorkException) {
+                sb.append("\ndescribe : ");
+                sb.append("网络不同导致定位失败，请检查网络是否通畅");
+            } else if (location.getLocType() == BDLocation.TypeCriteriaException) {
+                sb.append("\ndescribe : ");
+                sb.append("无法获取有效定位依据导致定位失败，一般是由于手机的原因，处于飞行模式下一般会造成这种结果，可以试着重启手机");
+            }
+            sb.append("\nlocationdescribe : ");
+            sb.append(location.getLocationDescribe());// 位置语义化信息
+            List<Poi> list = location.getPoiList();// POI数据
+            if (list != null) {
+                sb.append("\npoilist size = : ");
+                sb.append(list.size());
+                for (Poi p : list) {
+                    sb.append("\npoi= : ");
+                    sb.append(p.getId() + " " + p.getName() + " " + p.getRank());
+                }
+            }
+            Log.i("BaiduLocationApiDem", sb.toString());
+
+
+
+            //显示当前位置
+            if(BaiduLocation!=null) {
+                MyLocationData locData = new MyLocationData.Builder().accuracy(BaiduLocation.getRadius())                // 此处设置开发者获取到的方向信息，顺时针0-360
+                        .direction(100).latitude(BaiduLocation.getLatitude())
+                        .longitude(BaiduLocation.getLongitude()).build()
+
+                        ;
+// 设置定位数据
+                baiduMap.setMyLocationData(locData);
+                Log.i(TAG, "set my location on map success!!");
+                //设置当前位置为中心
+
+            }
+            else {
+                Log.i(TAG, "BaiduLocation==null!!");
+            }
+            if(isFirstLocate){
+                if(BaiduLocation!=null) {
+                    Log.i(TAG, "This is first locate!");
+                    latLng = new LatLng(BaiduLocation.getLatitude(), BaiduLocation.getLongitude());
+                    Log.i(TAG, "My location is " + latLng.toString());
+                    MapStatusUpdate update=MapStatusUpdateFactory.newLatLng(latLng);
+                    Log.i(TAG, "reset map center...");
+                    baiduMap.animateMapStatus(update);
+//                    baiduMap.setMaxAndMinZoomLevel(20,16);
+
+//                    Log.i(TAG, "reset zomm to 18");
+//                    update = MapStatusUpdateFactory.zoomTo(18);
+//                    baiduMap.animateMapStatus(update);
+                    isFirstLocate = false;
+                }
+                else {
+                    Log.i(TAG, "BaiduLocation is null!");
+                }
+            }
+            else {
+                Log.i(TAG, "This is not first locate!");
+            }
+
+        }
+    }
+
+    //initiate location  mode
+    private void initLocation(){
+        LocationClientOption option = new LocationClientOption();
+        option.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy
+        );//可选，默认高精度，设置定位模式，高精度，低功耗，仅设备
+        option.setCoorType("bd09ll");//可选，默认gcj02，设置返回的定位结果坐标系
+//        option.setCoorType("gcj02");
+        int span=1000;
+        option.setScanSpan(span);//可选，默认0，即仅定位一次，设置发起定位请求的间隔需要大于等于1000ms才是有效的
+        option.setIsNeedAddress(true);//可选，设置是否需要地址信息，默认不需要
+        option.setOpenGps(true);//可选，默认false,设置是否使用gps
+        option.setLocationNotify(true);//可选，默认false，设置是否当GPS有效时按照1S/1次频率输出GPS结果
+        option.setIsNeedLocationDescribe(true);//可选，默认false，设置是否需要位置语义化结果，可以在BDLocation.getLocationDescribe里得到，结果类似于“在北京天安门附近”
+        option.setIsNeedLocationPoiList(true);//可选，默认false，设置是否需要POI结果，可以在BDLocation.getPoiList里得到
+        option.setIgnoreKillProcess(false);//可选，默认true，定位SDK内部是一个SERVICE，并放到了独立进程，设置是否在stop的时候杀死这个进程，默认不杀死
+        option.SetIgnoreCacheException(false);//可选，默认false，设置是否收集CRASH信息，默认收集
+        option.setEnableSimulateGps(false);//可选，默认false，设置是否需要过滤GPS仿真结果，默认需要
+        mLocationClient.setLocOption(option);
+    }
+
+
+
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        SDKInitializer.initialize(getApplicationContext());
         super.onCreate(savedInstanceState);
 
-        SDKInitializer.initialize(getApplicationContext());
 
+        Intent intent=getIntent();
+        String userName=intent.getStringExtra("userName");
+        Log.i(TAG, "get user name:"+userName);
+        serverAddress=intent.getStringExtra("serverAddress");
+        Log.i(TAG, "get server address:"+serverAddress);
 
         setContentView(R.layout.activity_main_activity_v2);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+
+
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -74,75 +238,123 @@ public class MainActivityV2 extends AppCompatActivity
 
 
 
+        // Baidu locate initialize
+        mLocationClient = new LocationClient(getApplicationContext());     //声明LocationClient类
+        mLocationClient.registerLocationListener( myListener );    //注册监听函数
+        initLocation();//初始化
+        mLocationClient.start();//开始获取服务
+
+
 
         //Baidu map initialize
         mapView = (MapView) findViewById(R.id.map_view);
         baiduMap = mapView.getMap();
         baiduMap.setMyLocationEnabled(true);
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        //get location provider;
-        List<String> providerList = locationManager.getAllProviders();
-        Log.d(TAG, "Begin to get provider");
-        if (providerList.contains(LocationManager.GPS_PROVIDER)) {
-            Log.d(TAG, "provider is GPS");
-            provider = LocationManager.GPS_PROVIDER;
-            //make provider a GPS provider;
-            //send probider to location;
-            Location templocation = locationManager.getLastKnownLocation(provider);
-            if (templocation == null) {
-                if (providerList.contains(LocationManager.PASSIVE_PROVIDER)){
-                    Log.d(TAG, "provider is passive");
-                    provider = LocationManager.NETWORK_PROVIDER;
-                }
-                else  {
-                    if ((providerList.contains(LocationManager.NETWORK_PROVIDER)))
-                    Log.d(TAG, "provider is network");
-                    provider = LocationManager.NETWORK_PROVIDER;
-                }
-            } else {
-                Log.d(TAG, "no provider");
-                Toast.makeText(this, "No location provider to use", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            Location location = locationManager.getLastKnownLocation(provider);
-            if (location != null) {
-                Log.d(TAG, "location!=null");
-                Toast.makeText(this, "location!=null", Toast.LENGTH_SHORT).show();
-                navigateTo(location);
-            } else {
-                Log.d(TAG, "location=null， do not go into navigate");
-            }
-            locationManager.requestLocationUpdates(provider, 5000, 1, locationListener);
-        }
+
+
+
+
+
+// 设置定位图层的配置（定位模式，是否允许方向信息，用户自定义定位图标）
+//        mCurrentMarker = BitmapDescriptorFactory
+//                .fromResource(R.drawable.icon_geo);
+//        MyLocationConfiguration config = new MyLocationConfiguration(mCurrentMode, true, mCurrentMarker);
+//        mBaiduMap.setMyLocationConfiguration();
+
+
+//        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+//        //get location provider;
+//        List<String> providerList = locationManager.getAllProviders();
+//        Log.d(TAG, "Begin to get provider");
+//        if (providerList.contains(LocationManager.GPS_PROVIDER)) {
+//            Log.d(TAG, "provider is GPS");
+//            provider = LocationManager.GPS_PROVIDER;
+//            //make provider a GPS provider;
+//            //send probider to location;
+//            Location templocation = locationManager.getLastKnownLocation(provider);
+//            if (templocation == null) {
+//                if (providerList.contains(LocationManager.PASSIVE_PROVIDER)){
+//                    Log.d(TAG, "provider is passive");
+//                    provider = LocationManager.NETWORK_PROVIDER;
+//                }
+//                else  {
+//                    if ((providerList.contains(LocationManager.NETWORK_PROVIDER)))
+//                    Log.d(TAG, "provider is network");
+//                    provider = LocationManager.NETWORK_PROVIDER;
+//                }
+//            } else {
+//                Log.d(TAG, "no provider");
+//                Toast.makeText(this, "No location provider to use", Toast.LENGTH_SHORT).show();
+//                return;
+//            }
+//            Location location = locationManager.getLastKnownLocation(provider);
+//            if (location != null) {
+//                Log.d(TAG, "location!=null");
+//                Toast.makeText(this, "location!=null", Toast.LENGTH_SHORT).show();
+//                navigateTo(location);
+//            } else {
+//                Log.d(TAG, "location=null， do not go into navigate");
+//            }
+//            locationManager.requestLocationUpdates(provider, 5000, 1, locationListener);
+//        }
+
+
+
+//        //bind service
+//        startNDNService=(Button)findViewById(R.id.start_ndn_service);
+//        sendInterest=(Button)findViewById(R.id.send_Interest);
+//        startNDNService.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                Intent startNDNIntent = new Intent (MainActivityV2.this, NDN_service.class);
+//                bindService(startNDNIntent,NDNServiceConnection,BIND_AUTO_CREATE);
+//                startService(startNDNIntent);
+//                Log.i(TAG, "start NDN service");
+//
+//            }
+//        });
+//        sendInterest.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                //send interest service here;
+//                Intent startSensoryIntent=new Intent(MainActivityV2.this,Sensory_service.class);
+//                bindService(startSensoryIntent,SensoryServiceConnection,BIND_AUTO_CREATE);
+//                startService(startSensoryIntent);
+//                Log.i(TAG, "start sensory service");
+//            }
+//        });
+
+
+
     }
 
 
 
-    private void navigateTo(Location location){
-        Log.d(TAG,"get into navigateTo");
-        if(isFirstLocate){
-            latLng=new LatLng(location.getLatitude(),location.getLongitude());
-            MapStatusUpdate update= MapStatusUpdateFactory.newLatLng(latLng);
-            baiduMap.animateMapStatus(update);
-            Log.d(TAG,"set zomm to 16");
-            update=MapStatusUpdateFactory.zoomTo(16);
-            baiduMap.animateMapStatus(update);
-            isFirstLocate=false;
-        }
-        Log.d(TAG,"gonna set my location in the map");
-        MyLocationData.Builder locationBuilder =new MyLocationData.Builder();
-        locationBuilder.latitude(location.getLatitude());
-        locationBuilder.longitude(location.getLongitude());
-        MyLocationData locationData=locationBuilder.build();
-        baiduMap.setMyLocationData(locationData);
-    }
+//    private void navigateTo(Location location){
+//        Log.d(TAG,"get into navigateTo");
+//        if(isFirstLocate){
+//            latLng=new LatLng(location.getLatitude(),location.getLongitude());
+//            MapStatusUpdate update= MapStatusUpdateFactory.newLatLng(latLng);
+//            baiduMap.animateMapStatus(update);
+//            Log.d(TAG,"set zomm to 16");
+//            update=MapStatusUpdateFactory.zoomTo(16);
+//            baiduMap.animateMapStatus(update);
+//            isFirstLocate=false;
+//        }
+//        Log.d(TAG,"gonna set my location in the map");
+//        MyLocationData.Builder locationBuilder =new MyLocationData.Builder();
+//        locationBuilder.latitude(location.getLatitude());
+//        locationBuilder.longitude(location.getLongitude());
+//        MyLocationData locationData=locationBuilder.build();
+//        baiduMap.setMyLocationData(locationData);
+//    }
 
     LocationListener locationListener= new LocationListener() {
         @Override
         public void onLocationChanged(Location location) {
             if(location!=null){
                 Log.d(TAG,"gonna get into navigateTo because of location changed");
-                navigateTo(location);
+//                navigateTo(location);
             }
         }
 
@@ -194,7 +406,7 @@ public class MainActivityV2 extends AppCompatActivity
 
 
 
-
+//menu control
 
     @Override
     public void onBackPressed() {
@@ -222,6 +434,10 @@ public class MainActivityV2 extends AppCompatActivity
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            Intent startNDNIntent = new Intent (MainActivityV2.this, NDN_service.class);
+            bindService(startNDNIntent,NDNServiceConnection,BIND_AUTO_CREATE);
+            startService(startNDNIntent);
+            Log.i(TAG, "start NDN service");
             return true;
         }
 
@@ -234,17 +450,17 @@ public class MainActivityV2 extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
+        if (id == R.id.nav_node) {
             // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
+        } else if (id == R.id.nav_topo) {
 
-        } else if (id == R.id.nav_slideshow) {
+        } else if (id == R.id.nav_getAll) {
 
-        } else if (id == R.id.nav_manage) {
+        } else if (id == R.id.nav_getPoint) {
 
-        } else if (id == R.id.nav_share) {
+        } else if (id == R.id.nav_history) {
 
-        } else if (id == R.id.nav_send) {
+        } else if (id == R.id.nav_tendency) {
 
         }
 
@@ -260,11 +476,12 @@ public class MainActivityV2 extends AppCompatActivity
 
 //        unbindService(NDNServiceConnection);
 //        unbindService(SensoryServiceConnection);
+        mLocationClient.stop();
         baiduMap.setMyLocationEnabled(false);
         mapView.onDestroy();
-        if(locationManager!=null){
-            locationManager.removeUpdates(locationListener);
-        }
+//        if(locationManager!=null){
+//            locationManager.removeUpdates(locationListener);
+//        }
     }
 
     @Override
@@ -278,6 +495,40 @@ public class MainActivityV2 extends AppCompatActivity
         super.onResume();
         mapView.onResume();
     }
+
+
+    //bind NDN service with main activity;
+    private NDN_service.ServiceBinder serviceBinder;
+
+    private ServiceConnection NDNServiceConnection = new ServiceConnection(){
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
+        }
+
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            serviceBinder=(NDN_service.ServiceBinder)iBinder;
+            serviceBinder.startBind(latLng,serverAddress);
+        }
+    };
+
+    //bidn sensory service with main activity;
+    private Sensory_service.ServiceBinder SensoryServiceBinder;
+    private ServiceConnection SensoryServiceConnection=new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            SensoryServiceBinder=(Sensory_service.ServiceBinder)iBinder;
+            SensoryServiceBinder.startBind();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
+        }
+    };
+
+
 
 
 

@@ -3,19 +3,19 @@
 
     <group android:checkableBehavior="single">
         <item
-            android:id="@+id/nav_camera"
+            android:id="@+id/nav_node"
             android:icon="@drawable/ic_menu_camera"
             android:title="Node" />
         <item
-            android:id="@+id/nav_gallery"
+            android:id="@+id/nav_topo"
             android:icon="@drawable/ic_menu_gallery"
             android:title="Topo" />
         <item
-            android:id="@+id/nav_slideshow"
+            android:id="@+id/nav_getAll"
             android:icon="@drawable/ic_menu_slideshow"
             android:title="Get All" />
         <item
-            android:id="@+id/nav_manage"
+            android:id="@+id/nav_getPoint"
             android:icon="@drawable/ic_menu_manage"
             android:title="Get Point" />
     </group>
@@ -23,11 +23,11 @@
     <item android:title="Others">
         <menu>
             <item
-                android:id="@+id/nav_share"
+                android:id="@+id/nav_history"
                 android:icon="@drawable/ic_menu_share"
                 android:title="History" />
             <item
-                android:id="@+id/nav_send"
+                android:id="@+id/nav_tendency"
                 android:icon="@drawable/ic_menu_send"
                 android:title="Tendency" />
         </menu>
