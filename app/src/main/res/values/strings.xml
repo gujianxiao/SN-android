@@ -20,4 +20,6 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string name="action_settings">Start Service</string>
+    <string name="default_user">cb361991@163.com</string>
+
 </resources>

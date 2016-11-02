@@ -11,7 +11,6 @@ import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.StrictMode;
-import android.support.annotation.IntegerRes;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -88,43 +87,29 @@ private SensorEventListener listener=new SensorEventListener() {
 
     }
 };
-    public class Location{
-        private int latitude;
-        private int longitude;
 
-        public Location(int lat, int lng){
-            latitude=lat;
-            longitude=lng;
-        }
-
-        public int getLatitude(){
-           return latitude;
-        }
-
-        public int getLongitude(){
-            return longitude;
-        }
-    }
 
     HashMap<Integer,Integer> topoBase=new HashMap<>();
+    //initiate topo into a hashmap
     public void initiateTopo(String msg){
         Log.i(TAG, "initiateTopo...");
         String topoSet[]=msg.split("\\$+");
         for(String topo:topoSet){
             String temp[]=topo.split("->");
             topoBase.put(Integer.parseInt(temp[0]),Integer.parseInt(temp[1]));
-            Log.i(TAG, "update topo base "+Integer.parseInt(temp[0])+"to "+Integer.parseInt(temp[1]));
+            Log.i(TAG, "update topo base "+Integer.parseInt(temp[0])+" to "+topoBase.get(Integer.parseInt(temp[0])));
         }
     }
-    HashMap<Integer,Location> locationBase=new HashMap<>();
+    HashMap<Integer,WSNLocation> locationBase=new HashMap<>();
+    //initiate location into a hashmap
     public void initiateLocation(String msg){
         Log.i(TAG, "initiateLocation...");
         String locationSet[]=msg.split("\\$+");
         for(String location:locationSet){
             String temp[]=location.split("->|\\(|\\)|,");
-            Location tempLocation=new Location(Integer.parseInt(temp[2]),Integer.parseInt(temp[3]));
-            locationBase.put(Integer.parseInt(temp[0]),tempLocation);
-            Log.i(TAG, "update location base "+String.valueOf(temp[0])+"to "+locationBase.get(Integer.parseInt(temp[0])).toString());
+            WSNLocation tempWSNLocation =new WSNLocation(Integer.parseInt(temp[2]),Integer.parseInt(temp[3]));
+            locationBase.put(Integer.parseInt(temp[0]), tempWSNLocation);
+            Log.i(TAG, "update location base "+String.valueOf(temp[0])+" to "+locationBase.get(Integer.parseInt(temp[0])).getLatitude()+","+locationBase.get(Integer.parseInt(temp[0])).getLongitude());
         }
 
     }
@@ -719,7 +704,7 @@ private SensorEventListener listener=new SensorEventListener() {
 
 
     public class ServiceBinder extends Binder {
-        public void startBind(LatLng ll, String serverAddress) {
+        public boolean startBind(LatLng ll, String serverAddress) {
 
 
 
@@ -740,7 +725,7 @@ private SensorEventListener listener=new SensorEventListener() {
             double lat=deviceLatLng.latitude;
             double lng=deviceLatLng.longitude;
             //set filter of this device
-            deviceName=new Name("wifi/"+lat+"/"+lng);
+            deviceName=new Name("/wifi/register/"+lat+"/"+lng);
 //            Name incomInName=new Name(deviceName);
             Log.i(TAG, "name initiate");
 
@@ -781,12 +766,35 @@ private SensorEventListener listener=new SensorEventListener() {
             else{
                 Log.i(TAG, "register device in gateway failed, fail to create filter of this device try later...");
             }
+            if (locationBase.size()>0&&topoBase.size()>0){
+                return true;
+            }
+            else{
+                Log.i(TAG, "startBind not finish topo and location initiate.");
+                return false;
+            }
 
 
-
-
-            //send Interest of selected area here;
         }
+
+
+
+        public HashMap<Integer,WSNLocation> getLocationBase(){
+            return locationBase;
+        }
+
+
+        public HashMap<Integer,Integer> getTopoBase(){
+            return topoBase;
+        }
+
+
+
+
+
+
+
+
 
     }
 

@@ -1,19 +1,18 @@
 package com.example.cb.sn_android;
 
 import android.content.ComponentName;
-import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
-import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -32,15 +31,20 @@ import com.baidu.location.LocationClientOption;
 import com.baidu.location.Poi;
 import com.baidu.mapapi.SDKInitializer;
 import com.baidu.mapapi.map.BaiduMap;
+import com.baidu.mapapi.map.BitmapDescriptor;
 import com.baidu.mapapi.map.BitmapDescriptorFactory;
 import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
-import com.baidu.mapapi.map.MyLocationConfiguration;
+import com.baidu.mapapi.map.Marker;
+import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
 
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivityV2 extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -63,6 +67,10 @@ public class MainActivityV2 extends AppCompatActivity
     public LocationClient mLocationClient = null;
     public BDLocationListener myListener = new MyLocationListener();
     public BDLocation BaiduLocation;
+
+
+    HashMap<Integer,WSNLocation> locationBase;
+    HashMap<Integer,Integer> topoBase;
 
     public class MyLocationListener implements BDLocationListener {
 
@@ -218,14 +226,14 @@ public class MainActivityV2 extends AppCompatActivity
 
 
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+//       FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+//        fab.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+//                        .setAction("Action", null).show();
+//            }
+//        });
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -438,11 +446,131 @@ public class MainActivityV2 extends AppCompatActivity
             bindService(startNDNIntent,NDNServiceConnection,BIND_AUTO_CREATE);
             startService(startNDNIntent);
             Log.i(TAG, "start NDN service");
+
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
+
+    public void initiateLocation(HashMap<Integer,WSNLocation> Base){
+        Log.i(TAG, "initiateLocation: begining to set node in the map...");
+        MarkerOptions nodeSet[]=new MarkerOptions[10];
+//        int i=0;
+        Iterator iterator=Base.entrySet().iterator();
+        while(iterator.hasNext()) {
+            Map.Entry entry = (Map.Entry) iterator.next();
+            WSNLocation tempWSNLocationEntry =(WSNLocation) entry.getValue();
+            double latitude=Double.valueOf("39.965"+ tempWSNLocationEntry.getLatitude());
+            double longitude=Double.valueOf("116.362"+ tempWSNLocationEntry.getLongitude());
+            Log.i(TAG, "nodeSet["+entry.getKey()+"] start initiate...");
+            int i=(int)entry.getKey();
+            nodeSet[i] = new MarkerOptions();
+            BitmapDescriptor bitmap = BitmapDescriptorFactory.fromResource(R.drawable.icon_gcoding);
+            nodeSet[i].position(new LatLng(latitude,longitude)).icon(bitmap);
+            //set marker option extro info of relative position
+            Bundle tempBundle=new Bundle();
+            int tempD[]={(int)entry.getKey(), tempWSNLocationEntry.getLatitude(), tempWSNLocationEntry.getLongitude()};
+            tempBundle.putIntArray("rl",tempD);
+            nodeSet[i].extraInfo(tempBundle);
+            baiduMap.addOverlay(nodeSet[i]);
+        }
+
+
+//        for(int i=0;i<Base.size();i++){
+//            double latitude=Double.valueOf("39.9663"+Base.get(i).getLatitude());
+//            double longitude=Double.valueOf("116.3630"+Base.get(i).getLatitude());
+//            nodeSet[i].position(new LatLng(latitude,longitude));
+//            baiduMap.addOverlay(nodeSet[i]);
+//        }
+        baiduMap.setOnMarkerClickListener(new BaiduMap.OnMarkerClickListener() {
+
+            @Override
+            public boolean onMarkerClick(final Marker arg0) {
+                // TODO Auto-generated method stub
+                //send Interest of a node
+                final String[] Items={"Temperature","Illumination","accelerometer"};
+                new AlertDialog.Builder(MainActivityV2.this)
+                        .setTitle("Interest type:")
+                        .setIcon(android.R.drawable.ic_dialog_info)
+                        .setSingleChoiceItems(Items, 0,new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        /*int index=0;
+                                        Log.i(TAG, "click send interest");
+                                        if (which >= 0)
+                                        {
+                                            Log.i(TAG, "choose item!");
+
+                                            //如果单击的是列表项，将当前列表项的索引保存在index中。
+
+                                            //如果想单击列表项后关闭对话框，可在此处调用dialog.cancel()
+
+                                            //或是用dialog.dismiss()方法。
+
+                                            index = which;
+
+                                        }*/
+//                                        if(which==DialogInterface.BUTTON_NEUTRAL){
+                                        //dialog.dismiss();
+                                        if (which == 0) {
+                                            Bundle tempB = arg0.getExtraInfo();
+                                            int id[] = tempB.getIntArray("rl");
+                                            Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+                                            HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
+                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"temp"));
+                                            new SendInterestTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+
+
+                                        } else if (which == 1) {
+                                            Bundle tempB = arg0.getExtraInfo();
+                                            int id[] = tempB.getIntArray("rl");
+                                            Log.i(TAG, "2_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+                                            HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
+                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"light"));
+                                            new SendInterestTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+
+
+                                        } else if (which == 2) {
+                                            Bundle tempB = arg0.getExtraInfo();
+                                            int id[] = tempB.getIntArray("rl");
+                                            Log.i(TAG, "3_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+                                            HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
+                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"humidity"));
+//                                                new SendInterestTask().execute(tempHashMap);
+                                            new SendInterestTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                        } else {
+                                            Log.i(TAG, "onClick: type is null");
+                                        }
+                                        dialog.dismiss();
+                                    }
+                                        /*else if (which==DialogInterface.BUTTON_NEGATIVE){
+                                            Toast.makeText(MainActivityV2.this, "You choose nothing! Try again.",
+
+                                                    Toast.LENGTH_LONG);
+                                        }
+*/
+//                                    }
+                                }
+
+                        )
+                        .setNegativeButton("cancel", null)
+//                        .setPositiveButton("OK", null)
+                        .show();
+                //Toast.makeText(getApplicationContext(), "Marker被点击了！", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
+
+    }
+
+    public void initiateTopo(HashMap<Integer,Integer> Base){
+        //show topo here waiting for finishing later        ...
+    }
+
+
+
+
+
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
@@ -451,6 +579,9 @@ public class MainActivityV2 extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.nav_node) {
+
+
+
             // Handle the camera action
         } else if (id == R.id.nav_topo) {
 
@@ -509,7 +640,32 @@ public class MainActivityV2 extends AppCompatActivity
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             serviceBinder=(NDN_service.ServiceBinder)iBinder;
-            serviceBinder.startBind(latLng,serverAddress);
+            boolean tagOfBind;
+            int tryTime=0;
+
+            do{
+                tagOfBind=serviceBinder.startBind(latLng,serverAddress);
+                try {
+                    Thread.sleep(1000);
+                }
+                catch (Exception e){
+                    e.printStackTrace();
+                }
+                tryTime++;
+
+            } while(tagOfBind!=true&&tryTime<10);
+            if (tryTime>=10){
+                Log.i(TAG, "onServiceConnected: failed... try to tart app again!");
+                return ;
+            }
+            Log.i(TAG, "NDN service initiate successful but wait for updata UI in main activity...");
+            locationBase = serviceBinder.getLocationBase();
+            Log.i(TAG, "get locationBase from NDN service size is "+locationBase.size());
+            topoBase = serviceBinder.getTopoBase();
+            Log.i(TAG, "get topoBase from NDN service size is "+topoBase.size());
+            initiateLocation(locationBase);
+            initiateTopo(topoBase);
+            Log.i(TAG, "update UI success in mian acitivity!");
         }
     };
 
