@@ -24,6 +24,7 @@ import net.named_data.jndn.Face;
 import net.named_data.jndn.Interest;
 
 import net.named_data.jndn.InterestFilter;
+import net.named_data.jndn.MetaInfo;
 import net.named_data.jndn.Name;
 
 import net.named_data.jndn.OnData;
@@ -59,7 +60,7 @@ public class NDN_service extends Service{
     Name deviceName;
     incomingData incomD = new incomingData();
     public int callbackCount= 0;
-    private  int registerSignal=0;
+    private  int registerSignal=1;
     private LatLng deviceLatLng;
     private ServiceBinder serviceBinder=new ServiceBinder();
     private String HOST;
@@ -137,6 +138,9 @@ private SensorEventListener listener=new SensorEventListener() {
                     initiateLocation(msg);
                 }
                 else {
+                    if (data.getContent().toString().equals("success")){
+                        registerSignal=0;
+                    }
                     Log.i(TAG, "this Data is not topo or location");
                 }
 
@@ -157,7 +161,7 @@ private SensorEventListener listener=new SensorEventListener() {
     private  class incomingInterest implements OnInterestCallback{
         @Override
         public void onInterest(Name name, Interest interest, Face face, long l, InterestFilter interestFilter) {
-            Log.i(TAG, "Get interest:" + interest.getName().toUri()+" from face:"+face.toString());
+            Log.i(TAG, "Get interest:" + interest.getName().toString());
             /*
             Dealing with interest and package the data here...
              */
@@ -166,13 +170,37 @@ private SensorEventListener listener=new SensorEventListener() {
                 light =sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
                 temperature=sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
                 accelerometer=sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-                sensorManager.registerListener(listener,light,SensorManager.SENSOR_DELAY_UI);
+
 
                 Name tempName=interest.getName();
-                Data backData=new Data(tempName);
-                Blob blob=new Blob("sensor info from device"+deviceLatLng.latitude+deviceLatLng.longitude+" light is"+sensorValue);
-                backData.setContent(blob);
-                face.putData(backData);
+                String temp[]=interest.getName().toString().split("/");
+                MetaInfo metaInfo=new MetaInfo();
+                metaInfo.setFreshnessPeriod(10000);
+                if (temp[temp.length-1].equals("temp")){
+                    sensorManager.registerListener(listener,temperature,SensorManager.SENSOR_DELAY_UI);
+                    Data backData=new Data(tempName);
+                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+"/temp/"+sensorValue);
+                    backData.setContent(blob);
+                    backData.setMetaInfo(metaInfo);
+                    face.putData(backData);
+                }
+                else if (temp[temp.length-1].equals("light")){
+                    sensorManager.registerListener(listener,light,SensorManager.SENSOR_DELAY_UI);
+                    Data backData=new Data(tempName);
+                    Blob blob=new Blob("/"+deviceLatLng.latitude+"," +deviceLatLng.longitude+"/light/"+sensorValue);
+                    backData.setContent(blob);
+                    backData.setMetaInfo(metaInfo);
+                    face.putData(backData);
+                }
+                else if (temp[temp.length-1].equals("acceler")){
+                    sensorManager.registerListener(listener,accelerometer,SensorManager.SENSOR_DELAY_UI);
+                    Data backData=new Data(tempName);
+                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+"/acceler/"+sensorValue);
+                    backData.setContent(blob);
+                    backData.setMetaInfo(metaInfo);
+                    face.putData(backData);
+                }
+
                 if (sensorManager!=null){
                     sensorManager.unregisterListener(listener);
                 }
@@ -746,8 +774,14 @@ private SensorEventListener listener=new SensorEventListener() {
 
                 try{
                     Log.i(TAG, "setInterestFilter initiate...");
-                    face.setInterestFilter(deviceName,incomI);
-                    Log.i(TAG, "initiate setInterestFilter success!");
+                    Name sensorInterest=new Name("/wifi/"+lat+"/"+lng);
+                    face.registerPrefix(sensorInterest,incomI,new OnRegisterFailed() {
+                        public void onRegisterFailed(Name prefix) {
+                            Log.i(TAG, "onRegisterFailed:Failed to register the external forwarder: " + prefix.toUri());
+                            System.exit(1);
+                        }
+                    });
+                    Log.i(TAG, "initiate setInterestFilter really success!");
 //                    KeyChain keyChain=new KeyChain();
 //                    Log.i(TAG, "keyChain initiate success");
 //                    face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());

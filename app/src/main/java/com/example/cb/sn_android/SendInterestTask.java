@@ -23,8 +23,15 @@ public class SendInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>,In
 
     private final String TAG="SendInterestTask";
     private Data comeBackData;
+    private Callback callback;
     private int callbackCount=0;
-
+    interface Callback{
+        public void updateUI(Data data);
+    }
+    public SendInterestTask(){}
+    public SendInterestTask(Callback callback){
+        this.callback = callback;
+    }
     @Override
     protected Boolean doInBackground(HashMap<Integer, WSNLocation>... base) {
         Log.i(TAG,"doInBackground............");
@@ -109,6 +116,9 @@ public class SendInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>,In
     @Override
     protected void onPostExecute(Boolean o) {
         Log.i(TAG, "onPostExecute: execute async task of send interest success!");
+        if(this.callback!=null){
+            this.callback.updateUI(comeBackData);
+        }
      //   Toast.makeText(MainActivityV2.,"Send Interest task success!",Toast.LENGTH_LONG).show();
         super.onPostExecute(o);
     }

@@ -4,19 +4,19 @@
     <group android:checkableBehavior="single">
         <item
             android:id="@+id/nav_node"
-            android:icon="@drawable/ic_menu_camera"
+            android:icon="@drawable/node"
             android:title="Node" />
         <item
             android:id="@+id/nav_topo"
-            android:icon="@drawable/ic_menu_gallery"
+            android:icon="@drawable/topo2"
             android:title="Topo" />
         <item
             android:id="@+id/nav_getAll"
-            android:icon="@drawable/ic_menu_slideshow"
+            android:icon="@drawable/getall"
             android:title="Get All" />
         <item
             android:id="@+id/nav_getPoint"
-            android:icon="@drawable/ic_menu_manage"
+            android:icon="@drawable/help"
             android:title="Get Point" />
     </group>
 
@@ -24,11 +24,11 @@
         <menu>
             <item
                 android:id="@+id/nav_history"
-                android:icon="@drawable/ic_menu_share"
-                android:title="History" />
+                android:icon="@drawable/database"
+                android:title="Database" />
             <item
                 android:id="@+id/nav_tendency"
-                android:icon="@drawable/ic_menu_send"
+                android:icon="@drawable/history"
                 android:title="Tendency" />
         </menu>
     </item>

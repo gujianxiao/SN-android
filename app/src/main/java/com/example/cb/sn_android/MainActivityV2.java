@@ -21,6 +21,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -33,6 +34,8 @@ import com.baidu.mapapi.SDKInitializer;
 import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.BitmapDescriptor;
 import com.baidu.mapapi.map.BitmapDescriptorFactory;
+import com.baidu.mapapi.map.InfoWindow;
+import com.baidu.mapapi.map.MapStatus;
 import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
@@ -41,13 +44,15 @@ import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
 
+import net.named_data.jndn.Data;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 public class MainActivityV2 extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
+        implements NavigationView.OnNavigationItemSelectedListener,SendInterestTask.Callback {
 
 
     private final String TAG="sn-android main";
@@ -71,6 +76,40 @@ public class MainActivityV2 extends AppCompatActivity
 
     HashMap<Integer,WSNLocation> locationBase;
     HashMap<Integer,Integer> topoBase;
+
+
+    private int selectedItem=0;
+    private InfoWindow mInfoWindow;
+    MarkerOptions nodeSet[]=new MarkerOptions[10];
+
+
+    @Override
+    public void updateUI(Data data) {
+
+        Log.i(TAG,data.getContent().toString());
+        String tempData[]=data.getContent().toString().split("\\$+");
+            String tp[]=tempData[0].split("/");
+            Button button = new Button(getApplicationContext());
+            button.setBackgroundResource(R.drawable.popup2);
+            InfoWindow.OnInfoWindowClickListener listener = null;
+            button.setText(tp[3]+": "+tp[4]);
+//            button.setTextColor(0x0F0F0F);
+//            button.setHintTextColor(0x0F0F0F);
+     //       button.setBackgroundColor( 0x666666 );
+            button.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+//                marker.setIcon(bd);
+                    baiduMap.hideInfoWindow();
+                }
+            });
+            LatLng ll = nodeSet[selectedItem].getPosition();
+            mInfoWindow = new InfoWindow(button, ll, -47);
+
+            baiduMap.showInfoWindow(mInfoWindow);
+
+
+
+    }
 
     public class MyLocationListener implements BDLocationListener {
 
@@ -455,14 +494,14 @@ public class MainActivityV2 extends AppCompatActivity
 
     public void initiateLocation(HashMap<Integer,WSNLocation> Base){
         Log.i(TAG, "initiateLocation: begining to set node in the map...");
-        MarkerOptions nodeSet[]=new MarkerOptions[10];
+//        MarkerOptions nodeSet[]=new MarkerOptions[10];
 //        int i=0;
         Iterator iterator=Base.entrySet().iterator();
         while(iterator.hasNext()) {
             Map.Entry entry = (Map.Entry) iterator.next();
             WSNLocation tempWSNLocationEntry =(WSNLocation) entry.getValue();
-            double latitude=Double.valueOf("39.965"+ tempWSNLocationEntry.getLatitude());
-            double longitude=Double.valueOf("116.362"+ tempWSNLocationEntry.getLongitude());
+            double latitude=Double.valueOf("39.96"+ tempWSNLocationEntry.getLatitude());
+            double longitude=Double.valueOf("116.36"+ tempWSNLocationEntry.getLongitude());
             Log.i(TAG, "nodeSet["+entry.getKey()+"] start initiate...");
             int i=(int)entry.getKey();
             nodeSet[i] = new MarkerOptions();
@@ -474,6 +513,7 @@ public class MainActivityV2 extends AppCompatActivity
             tempBundle.putIntArray("rl",tempD);
             nodeSet[i].extraInfo(tempBundle);
             baiduMap.addOverlay(nodeSet[i]);
+            baiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(new MapStatus.Builder().zoom(18).build()));
         }
 
 
@@ -493,7 +533,7 @@ public class MainActivityV2 extends AppCompatActivity
                 new AlertDialog.Builder(MainActivityV2.this)
                         .setTitle("Interest type:")
                         .setIcon(android.R.drawable.ic_dialog_info)
-                        .setSingleChoiceItems(Items, 0,new DialogInterface.OnClickListener() {
+                        .setSingleChoiceItems(Items, -1, new DialogInterface.OnClickListener() {
                                     public void onClick(DialogInterface dialog, int which) {
                                         /*int index=0;
                                         Log.i(TAG, "click send interest");
@@ -515,29 +555,32 @@ public class MainActivityV2 extends AppCompatActivity
                                         if (which == 0) {
                                             Bundle tempB = arg0.getExtraInfo();
                                             int id[] = tempB.getIntArray("rl");
+                                            selectedItem=id[0];
                                             Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
                                             HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
                                             tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"temp"));
-                                            new SendInterestTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                            new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
 
                                         } else if (which == 1) {
                                             Bundle tempB = arg0.getExtraInfo();
                                             int id[] = tempB.getIntArray("rl");
+                                            selectedItem=id[0];
                                             Log.i(TAG, "2_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
                                             HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
                                             tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"light"));
-                                            new SendInterestTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                            new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
 
                                         } else if (which == 2) {
                                             Bundle tempB = arg0.getExtraInfo();
                                             int id[] = tempB.getIntArray("rl");
+                                            selectedItem=id[0];
                                             Log.i(TAG, "3_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
                                             HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
                                             tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"humidity"));
 //                                                new SendInterestTask().execute(tempHashMap);
-                                            new SendInterestTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                            new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
                                         } else {
                                             Log.i(TAG, "onClick: type is null");
                                         }
