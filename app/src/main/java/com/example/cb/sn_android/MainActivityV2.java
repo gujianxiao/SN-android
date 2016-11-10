@@ -12,6 +12,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v7.app.AlertDialog;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -23,6 +24,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.graphics.Point;
 import android.widget.Toast;
 
 import com.baidu.location.BDLocation;
@@ -43,6 +45,7 @@ import com.baidu.mapapi.map.Marker;
 import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
+//import com.baidu.mapapi.model.inner.Point;
 
 import net.named_data.jndn.Data;
 
@@ -65,7 +68,7 @@ public class MainActivityV2 extends AppCompatActivity
 
     private Button startNDNService;
     private Button sendInterest;
-
+    private DisplayMetrics dm ;
     private LatLng latLng;
     String serverAddress;
 
@@ -84,18 +87,20 @@ public class MainActivityV2 extends AppCompatActivity
 
 
     @Override
-    public void updateUI(Data data) {
+    public void updateUI(HashMap<Integer,Data> data) {
+        Log.i(TAG, "updateUI: ready to update UI");
 
-        Log.i(TAG,data.getContent().toString());
-        String tempData[]=data.getContent().toString().split("\\$+");
-            String tp[]=tempData[0].split("/");
+        if (data.size()==1) {
+            Log.i(TAG, data.get(0).getContent().toString());
+            String tempData[] = data.get(0).getContent().toString().split("\\$+");
+            String tp[] = tempData[0].split("/");
             Button button = new Button(getApplicationContext());
             button.setBackgroundResource(R.drawable.popup2);
             InfoWindow.OnInfoWindowClickListener listener = null;
-            button.setText(tp[3]+": "+tp[4]);
+            button.setText(tp[3] + ": " + tp[4]);
 //            button.setTextColor(0x0F0F0F);
 //            button.setHintTextColor(0x0F0F0F);
-     //       button.setBackgroundColor( 0x666666 );
+            //       button.setBackgroundColor( 0x666666 );
             button.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
 //                marker.setIcon(bd);
@@ -106,7 +111,56 @@ public class MainActivityV2 extends AppCompatActivity
             mInfoWindow = new InfoWindow(button, ll, -47);
 
             baiduMap.showInfoWindow(mInfoWindow);
+        }
+        else if (data.size()>1){
+            String info[]=new String[data.size()];
+            AlertDialog.Builder infoDialog= new AlertDialog.Builder(MainActivityV2.this);
+            infoDialog.setTitle("Sensory Data of Every Node");
+            for(int i=0;i<data.size();i++){
+                Data tpdata=data.get(i);
+                Log.i(TAG, tpdata.getContent().toString());
+                String tempData[] = tpdata.getContent().toString().split("\\$+");
+//                info[i]=new String();
+                info[i]=tempData[0];
+//                String tp[] = tempData[0].split("/");
+//                Log.i(TAG, "i:"+i+"; tempData[0]:"+tempData[0].toString()+"; tp:"+tp.length);
+//                Button button = new Button(getApplicationContext());
+//                button.setBackgroundResource(R.drawable.popup2);
+//                InfoWindow.OnInfoWindowClickListener listener = null;
+//                button.setText(tp[3] + ": " + tp[4]);
+////            button.setTextColor(0x0F0F0F);
+////            button.setHintTextColor(0x0F0F0F);
+//                //       button.setBackgroundColor( 0x666666 );
+//                button.setOnClickListener(new View.OnClickListener() {
+//                    public void onClick(View v) {
+////                marker.setIcon(bd);
+//                        baiduMap.hideInfoWindow();
+//                    }
+//                });
+//                String ttp[]=tp[1].split(",");
+//
+//                //wait for modify...
+//                Iterator iterator=locationBase.entrySet().iterator();
+//                while(iterator.hasNext()) {
+//                    Map.Entry entry = (Map.Entry) iterator.next();
+//                    int j=(int)entry.getKey();
+//                    Bundle tempB = nodeSet[j].getExtraInfo();
+//                    int id[] = tempB.getIntArray("rl");
+//                    if (id[1]==Integer.valueOf(ttp[0])&&id[2]==Integer.valueOf(ttp[1])) {
+//                        LatLng ll = nodeSet[j].getPosition();
+//                        mInfoWindow = new InfoWindow(button, ll, -47);
+//                        baiduMap.showInfoWindow(mInfoWindow);
+//                        break;
+//                    }
+//                }
 
+
+            }
+            infoDialog.setItems(info,null);
+            infoDialog.setPositiveButton("OK",null);
+            infoDialog.show();
+
+        }
 
 
     }
@@ -513,7 +567,7 @@ public class MainActivityV2 extends AppCompatActivity
             tempBundle.putIntArray("rl",tempD);
             nodeSet[i].extraInfo(tempBundle);
             baiduMap.addOverlay(nodeSet[i]);
-            baiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(new MapStatus.Builder().zoom(18).build()));
+            baiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(new MapStatus.Builder().zoom(20).build()));
         }
 
 
@@ -529,7 +583,7 @@ public class MainActivityV2 extends AppCompatActivity
             public boolean onMarkerClick(final Marker arg0) {
                 // TODO Auto-generated method stub
                 //send Interest of a node
-                final String[] Items={"Temperature","Illumination","accelerometer"};
+                final String[] Items={"Temperature","Illumination","humidity"};
                 new AlertDialog.Builder(MainActivityV2.this)
                         .setTitle("Interest type:")
                         .setIcon(android.R.drawable.ic_dialog_info)
@@ -609,9 +663,49 @@ public class MainActivityV2 extends AppCompatActivity
     public void initiateTopo(HashMap<Integer,Integer> Base){
         //show topo here waiting for finishing later        ...
     }
+    public int getStatusBarHeight() {
+        int result = 0;
+        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            result = getResources().getDimensionPixelSize(resourceId);
+        }
+        return result;
+    }
 
+    private LatLng getSite(int type) {
 
+        dm = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(dm);
 
+        int statusBarHeight = getStatusBarHeight();
+
+        Point pt = new Point();
+        if (type == 1) {
+            //左上角
+            pt.x = 0;
+            pt.y = 0;
+        }
+        if (type == 2) {
+            //左下角
+            pt.x = 0;
+            pt.y = dm.heightPixels;
+        }
+        if (type == 3) {
+            //右上角
+            pt.x = dm.widthPixels;
+            pt.y = statusBarHeight+60;
+        }
+        if (type == 4) {
+            //右下角
+            pt.x = dm.widthPixels;
+            pt.y = dm.heightPixels;
+        }
+        LatLng ll;
+        ll = baiduMap.getProjection().fromScreenLocation(pt);
+
+        return ll;
+
+    }
 
 
 
@@ -622,19 +716,238 @@ public class MainActivityV2 extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.nav_node) {
-
-
-
-            // Handle the camera action
+            // refresh the node location
         } else if (id == R.id.nav_topo) {
+            //show topo on the map
 
         } else if (id == R.id.nav_getAll) {
+            //send Interest of view
+            final String[] Items={"Temperature","Illumination","humidity"};
+            new AlertDialog.Builder(MainActivityV2.this)
+                    .setTitle("Interest type:")
+                    .setIcon(android.R.drawable.ic_dialog_info)
+                    .setSingleChoiceItems(Items, -1, new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                        /*int index=0;
+                                        Log.i(TAG, "click send interest");
+                                        if (which >= 0)
+                                        {
+                                            Log.i(TAG, "choose item!");
+
+                                            //如果单击的是列表项，将当前列表项的索引保存在index中。
+
+                                            //如果想单击列表项后关闭对话框，可在此处调用dialog.cancel()
+
+                                            //或是用dialog.dismiss()方法。
+
+                                            index = which;
+
+                                        }*/
+//                                        if(which==DialogInterface.BUTTON_NEUTRAL){
+                                    //dialog.dismiss();
+                                    if (which == 0) {
+//                                        Bundle tempB = arg0.getExtraInfo();
+//                                        int id[] = tempB.getIntArray("rl");
+//                                        selectedItem=id[0];
+//                                        Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+                                        HashMap<Integer, WSNLocation> tempHashMap = locationBase;
+//                                        tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"temp"));
+                                        Iterator iterator=tempHashMap.entrySet().iterator();
+                                        while(iterator.hasNext()){
+                                            Map.Entry entry = (Map.Entry) iterator.next();
+                                            WSNLocation tempWSNLocation=(WSNLocation)entry.getValue();
+                                            tempWSNLocation.setDataType("temp");
+                                            entry.setValue(tempWSNLocation);
+                                        }
+
+                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+
+
+                                    } else if (which == 1) {
+//                                        Bundle tempB = arg0.getExtraInfo();
+//                                        int id[] = tempB.getIntArray("rl");
+//                                        selectedItem=id[0];
+//                                        Log.i(TAG, "2_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+//                                        HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
+//                                        tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"light"));
+//                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+//
+                                        HashMap<Integer, WSNLocation> tempHashMap = locationBase;
+//                                        tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"temp"));
+                                        Iterator iterator=tempHashMap.entrySet().iterator();
+                                        while(iterator.hasNext()){
+                                            Map.Entry entry = (Map.Entry) iterator.next();
+                                            WSNLocation tempWSNLocation=(WSNLocation)entry.getValue();
+                                            tempWSNLocation.setDataType("light");
+                                            entry.setValue(tempWSNLocation);
+                                        }
+                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+
+                                    } else if (which == 2) {
+//                                        Bundle tempB = arg0.getExtraInfo();
+//                                        int id[] = tempB.getIntArray("rl");
+//                                        selectedItem=id[0];
+//                                        Log.i(TAG, "3_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+//                                        HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
+//                                        tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"humidity"));
+////                                                new SendInterestTask().execute(tempHashMap);
+//                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+
+                                        HashMap<Integer, WSNLocation> tempHashMap = locationBase;
+//                                        tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"temp"));
+                                        Iterator iterator=tempHashMap.entrySet().iterator();
+                                        while(iterator.hasNext()){
+                                            Map.Entry entry = (Map.Entry) iterator.next();
+                                            WSNLocation tempWSNLocation=(WSNLocation)entry.getValue();
+                                            tempWSNLocation.setDataType("humidity");
+                                            entry.setValue(tempWSNLocation);
+                                        }
+                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                    } else {
+                                        Log.i(TAG, "onClick: type is null");
+                                    }
+                                    dialog.dismiss();
+                                }
+                                        /*else if (which==DialogInterface.BUTTON_NEGATIVE){
+                                            Toast.makeText(MainActivityV2.this, "You choose nothing! Try again.",
+
+                                                    Toast.LENGTH_LONG);
+                                        }
+*/
+//                                    }
+                            }
+
+                    )
+                    .setNegativeButton("cancel", null)
+//                        .setPositiveButton("OK", null)
+                    .show();
 
         } else if (id == R.id.nav_getPoint) {
+            final String[] Items={"Temperature","Illumination","humidity"};
+            new AlertDialog.Builder(MainActivityV2.this)
+                    .setTitle("Interest type:")
+                    .setIcon(android.R.drawable.ic_dialog_info)
+                    .setSingleChoiceItems(Items, -1, new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                        /*int index=0;
+                                        Log.i(TAG, "click send interest");
+                                        if (which >= 0)
+                                        {
+                                            Log.i(TAG, "choose item!");
+
+                                            //如果单击的是列表项，将当前列表项的索引保存在index中。
+
+                                            //如果想单击列表项后关闭对话框，可在此处调用dialog.cancel()
+
+                                            //或是用dialog.dismiss()方法。
+
+                                            index = which;
+
+                                        }*/
+//                                        if(which==DialogInterface.BUTTON_NEUTRAL){
+                                    //dialog.dismiss();
+                                    if (which == 0) {
+//                                        Bundle tempB = arg0.getExtraInfo();
+//                                        int id[] = tempB.getIntArray("rl");
+//                                        selectedItem=id[0];
+//                                        Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+                                        HashMap<Integer, WSNLocation> tempHashMap =new HashMap<>();
+                                        LatLng leftDown=getSite(2);
+                                        String tpLDLat[]=Double.toString(leftDown.latitude).split("\\.");
+                                        String tpLDLng[]=Double.toString(leftDown.longitude).split("\\.");
+                                        LatLng rightUp=getSite(3);
+                                        String tpRULat[]=Double.toString(rightUp.latitude).split("\\.");
+                                        String tpRULng[]=Double.toString(rightUp.longitude).split("\\.");
+                                        String dataType="temp";
+                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(2,6)),
+                                                Integer.valueOf(tpLDLng[1].substring(2,6)),
+                                                Integer.valueOf(tpRULat[1].substring(2,6)),
+                                                Integer.valueOf(tpRULng[1].substring(2,6)),
+                                                dataType);
+                                        //HashMap<Integer,WSNLocation> tempHashMap=new HashMap();
+                                        tempHashMap.put(1000,tempWSNArea);
+
+                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+
+
+                                    } else if (which == 1) {
+//                                        Bundle tempB = arg0.getExtraInfo();
+//                                        int id[] = tempB.getIntArray("rl");
+//                                        selectedItem=id[0];
+//                                        Log.i(TAG, "2_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+//                                        HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
+//                                        tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"light"));
+//                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+//
+                                        HashMap<Integer, WSNLocation> tempHashMap =new HashMap<>();
+                                        LatLng leftDown=getSite(2);
+                                        String tpLDLat[]=Double.toString(leftDown.latitude).split(".");
+                                        String tpLDLng[]=Double.toString(leftDown.longitude).split(".");
+                                        LatLng rightUp=getSite(3);
+                                        String tpRULat[]=Double.toString(rightUp.latitude).split(".");
+                                        String tpRULng[]=Double.toString(rightUp.longitude).split(".");
+                                        String dataType="light";
+                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(tpLDLat.length-5,tpLDLat.length-1)),
+                                                Integer.valueOf(tpLDLng[1].substring(tpLDLng.length-4,tpLDLng.length)),
+                                                Integer.valueOf(tpRULat[1].substring(tpRULat.length-4,tpRULat.length)),
+                                                Integer.valueOf(tpRULng[1].substring(tpRULng.length-4,tpRULng.length)),
+                                                dataType);
+                                        //HashMap<Integer,WSNLocation> tempHashMap=new HashMap();
+                                        tempHashMap.put(1000,tempWSNArea);
+
+                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+
+                                    } else if (which == 2) {
+//                                        Bundle tempB = arg0.getExtraInfo();
+//                                        int id[] = tempB.getIntArray("rl");
+//                                        selectedItem=id[0];
+//                                        Log.i(TAG, "3_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+//                                        HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
+//                                        tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"humidity"));
+////                                                new SendInterestTask().execute(tempHashMap);
+//                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+
+                                        HashMap<Integer, WSNLocation> tempHashMap =new HashMap<>();
+                                        LatLng leftDown=getSite(2);
+                                        String tpLDLat[]=Double.toString(leftDown.latitude).split(".");
+                                        String tpLDLng[]=Double.toString(leftDown.longitude).split(".");
+                                        LatLng rightUp=getSite(3);
+                                        String tpRULat[]=Double.toString(rightUp.latitude).split(".");
+                                        String tpRULng[]=Double.toString(rightUp.longitude).split(".");
+                                        String dataType="humidity";
+                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(tpLDLat.length-5,tpLDLat.length-1)),
+                                                Integer.valueOf(tpLDLng[1].substring(tpLDLng.length-4,tpLDLng.length)),
+                                                Integer.valueOf(tpRULat[1].substring(tpRULat.length-4,tpRULat.length)),
+                                                Integer.valueOf(tpRULng[1].substring(tpRULng.length-4,tpRULng.length)),
+                                                dataType);
+                                        //HashMap<Integer,WSNLocation> tempHashMap=new HashMap();
+                                        tempHashMap.put(1000,tempWSNArea);
+
+                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                    } else {
+                                        Log.i(TAG, "onClick: type is null");
+                                    }
+                                    dialog.dismiss();
+                                }
+                                        /*else if (which==DialogInterface.BUTTON_NEGATIVE){
+                                            Toast.makeText(MainActivityV2.this, "You choose nothing! Try again.",
+
+                                                    Toast.LENGTH_LONG);
+                                        }
+*/
+//                                    }
+                            }
+
+                    )
+                    .setNegativeButton("cancel", null)
+//                        .setPositiveButton("OK", null)
+                    .show();
 
         } else if (id == R.id.nav_history) {
+            // show the history  sensory data
 
         } else if (id == R.id.nav_tendency) {
+            // show the tendency of sensory data
 
         }
 
@@ -723,6 +1036,7 @@ public class MainActivityV2 extends AppCompatActivity
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
+
 
         }
     };

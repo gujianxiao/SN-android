@@ -9,8 +9,59 @@ public class WSNLocation {
         private int latitude;
         private int longitude;
         private String dataType;
+        private int leftDownLat;
+        private int leftDownLng;
+        private int rightUpLat;
+        private int rightUpLng;
 
-        public WSNLocation(int lat, int lng){
+    public WSNLocation(int rightUpLat, int leftDownLat, int leftDownLng, int rightUpLng) {
+        this.rightUpLat = rightUpLat;
+        this.leftDownLat = leftDownLat;
+        this.leftDownLng = leftDownLng;
+        this.rightUpLng = rightUpLng;
+    }
+
+    public WSNLocation(int leftDownLat, int leftDownLng, int rightUpLat, int rightUpLng, String dataType) {
+        this.leftDownLat = leftDownLat;
+        this.leftDownLng = leftDownLng;
+        this.rightUpLat = rightUpLat;
+        this.rightUpLng = rightUpLng;
+        this.dataType = dataType;
+    }
+
+    public int getLeftDownLat() {
+        return leftDownLat;
+    }
+
+    public int getLeftDownLng() {
+        return leftDownLng;
+    }
+
+    public int getRightUpLat() {
+        return rightUpLat;
+    }
+
+    public int getRightUpLng() {
+        return rightUpLng;
+    }
+
+    public void setLeftDownLat(int leftDownLat) {
+        this.leftDownLat = leftDownLat;
+    }
+
+    public void setLeftDownLng(int leftDownLng) {
+        this.leftDownLng = leftDownLng;
+    }
+
+    public void setRightUpLat(int rightUpLat) {
+        this.rightUpLat = rightUpLat;
+    }
+
+    public void setRightUpLng(int rightUpLng) {
+        this.rightUpLng = rightUpLng;
+    }
+
+    public WSNLocation(int lat, int lng){
             latitude=lat;
             longitude=lng;
             dataType=null;
@@ -32,5 +83,21 @@ public class WSNLocation {
         }
 
         public String getDataType(){ return dataType; }
+
+        public boolean setLatitude(int la){
+            latitude=la;
+            return true;
+        }
+
+        public boolean setLongitude(int lng){
+            longitude=lng;
+            return true;
+        }
+        public boolean setDataType(String dt){
+            dataType=dt;
+            return true;
+        }
+
+
 
 }
