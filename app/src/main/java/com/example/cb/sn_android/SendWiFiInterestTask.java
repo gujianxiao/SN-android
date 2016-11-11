@@ -2,7 +2,6 @@ package com.example.cb.sn_android;
 
 import android.os.AsyncTask;
 import android.util.Log;
-import android.widget.Toast;
 
 import net.named_data.jndn.Data;
 import net.named_data.jndn.Face;
@@ -16,40 +15,40 @@ import java.util.Iterator;
 import java.util.Map;
 
 /**
- * Created by cb on 16-10-25.
+ * Created by cb on 16-11-11.
  */
-//SendInterestTask class, async task to send a Interest and show the Data on the map as a dialog. Waiting for storing into database.
-public class SendInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>,Integer,Boolean>{
+public class SendWiFiInterestTask extends AsyncTask <HashMap<Integer,WiFiLocation>,Integer,Boolean>{
 
-    private final String TAG="SendInterestTask";
+
+    private final String TAG="SendWiFiInterestTask";
     private HashMap<Integer,Data> comeBackData = new HashMap<>();
- //   private Data comeBackData[]=null;
+    //   private Data comeBackData[]=null;
     private Callback callback;
     private int callbackCount=0;
     private int dataCount=0;
     interface Callback{
         public void updateUI(HashMap<Integer,Data> updataBase);
     }
-    public SendInterestTask(){}
-    public SendInterestTask(Callback callback){
+    public SendWiFiInterestTask(){}
+    public SendWiFiInterestTask(Callback callback){
         this.callback = callback;
     }
     @Override
-    protected Boolean doInBackground(HashMap<Integer, WSNLocation>... base) {
+    protected Boolean doInBackground(HashMap<Integer, WiFiLocation>... base) {
         Log.i(TAG,"doInBackground............");
         Face face=new Face();
         if(base[0].size()>1&&base[0].get(1000)==null){
-            WSNLocation nodeWSNLocation;
+            WiFiLocation nodeWiFiLocation;
             Iterator iterator=base[0].entrySet().iterator();
             try {
-            while(iterator.hasNext()) {
-                Map.Entry entry = (Map.Entry) iterator.next();
-                int key = (int) entry.getKey();
-                nodeWSNLocation = (WSNLocation) entry.getValue();
-                Name interestOfNode = new Name("/wsn/" + nodeWSNLocation.getLatitude() +","+nodeWSNLocation.getLongitude() +"/"+nodeWSNLocation.getLatitude() +","+nodeWSNLocation.getLongitude()+"/0/10000/"+nodeWSNLocation.getDataType());
-                incomingData incomD = new incomingData();
-                face.expressInterest(interestOfNode, incomD, incomD);
-            }
+                while(iterator.hasNext()) {
+                    Map.Entry entry = (Map.Entry) iterator.next();
+                    int key = (int) entry.getKey();
+                    nodeWiFiLocation = (WiFiLocation) entry.getValue();
+                    Name interestOfNode = new Name("/wifi/" + nodeWiFiLocation.getLeftDown().latitude +","+nodeWiFiLocation.getLeftDown().longitude+"/"+nodeWiFiLocation.getRightUp().latitude+","+nodeWiFiLocation.getRightUp().longitude+"/0/10000/"+nodeWiFiLocation.getDataType());
+                    incomingData incomD = new incomingData();
+                    face.expressInterest(interestOfNode, incomD, incomD);
+                }
 
 
 
@@ -71,12 +70,12 @@ public class SendInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>,In
         }
 
         else if (base[0].size()==1&&base[0].get(1000)!=null){
-            WSNLocation nodeWSNLocation;
+            WiFiLocation nodeWiFiLocation;
             Iterator iterator=base[0].entrySet().iterator();
             Map.Entry entry=(Map.Entry)iterator.next();
             int key=(int)entry.getKey();
-            nodeWSNLocation =(WSNLocation)entry.getValue();
-            Name interestOfNode=new Name("/wsn/"+ nodeWSNLocation.getLeftDownLat()+ ","+nodeWSNLocation.getLeftDownLng()+"/"+ nodeWSNLocation.getRightUpLat()+","+ nodeWSNLocation.getRightUpLng()+"/0/10000/"+nodeWSNLocation.getDataType() );
+            nodeWiFiLocation =(WiFiLocation)entry.getValue();
+            Name interestOfNode=new Name("/wifi/"+ nodeWiFiLocation.getLeftDown().latitude+ ","+nodeWiFiLocation.getLeftDown().longitude+"/"+ nodeWiFiLocation.getRightUp().latitude+","+ nodeWiFiLocation.getRightUp().longitude+"/0/10000/"+nodeWiFiLocation.getDataType() );
             Log.i(TAG, "send interest "+interestOfNode.toString());
             incomingData incomD=new incomingData();
             try {
@@ -103,12 +102,14 @@ public class SendInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>,In
         }
 
         else if (base[0].size()==1&&base[0].get(1000)==null){
-            WSNLocation nodeWSNLocation;
+            WiFiLocation nodeWiFiLocation;
             Iterator iterator=base[0].entrySet().iterator();
             Map.Entry entry=(Map.Entry)iterator.next();
             int key=(int)entry.getKey();
-            nodeWSNLocation =(WSNLocation)entry.getValue();
-            Name interestOfNode=new Name("/wsn/"+ nodeWSNLocation.getLatitude()+ ","+nodeWSNLocation.getLongitude()+"/"+ nodeWSNLocation.getLatitude()+","+ nodeWSNLocation.getLongitude()+"/0/10000/"+nodeWSNLocation.getDataType() );
+            nodeWiFiLocation =(WiFiLocation)entry.getValue();
+            long currentTimeStart=System.currentTimeMillis();
+            long currentTimeEnd=currentTimeStart-10;
+            Name interestOfNode=new Name("/wifi/"+ nodeWiFiLocation.getLeftDown().latitude+ ","+nodeWiFiLocation.getLeftDown().longitude+"/"+ nodeWiFiLocation.getRightUp().latitude+","+ nodeWiFiLocation.getRightUp().longitude+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWiFiLocation.getDataType() );
             Log.i(TAG, "send interest "+interestOfNode.toString());
             incomingData incomD=new incomingData();
             try {
@@ -151,7 +152,7 @@ public class SendInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>,In
         if(this.callback!=null){
             this.callback.updateUI(comeBackData);
         }
-     //   Toast.makeText(MainActivityV2.,"Send Interest task success!",Toast.LENGTH_LONG).show();
+        //   Toast.makeText(MainActivityV2.,"Send Interest task success!",Toast.LENGTH_LONG).show();
         super.onPostExecute(o);
     }
 
@@ -176,7 +177,7 @@ public class SendInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>,In
 //        }
 //    }
 
-    private class incomingData implements OnData,OnTimeout{
+    private class incomingData implements OnData,OnTimeout {
         @Override
         public void onTimeout(Interest interest) {
             callbackCount++;
@@ -198,11 +199,4 @@ public class SendInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>,In
         }
 
     }
-
 }
-
-
-
-
-
-

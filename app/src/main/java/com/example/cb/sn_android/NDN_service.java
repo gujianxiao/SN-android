@@ -108,11 +108,10 @@ private SensorEventListener listener=new SensorEventListener() {
         String locationSet[]=msg.split("\\$+");
         for(String location:locationSet){
             String temp[]=location.split("->|\\(|\\)|,");
-            WSNLocation tempWSNLocation =new WSNLocation(Integer.parseInt(temp[2]),Integer.parseInt(temp[3]));
+            WSNLocation tempWSNLocation =new WSNLocation(Integer.parseInt(temp[3]),Integer.parseInt(temp[2]));
             locationBase.put(Integer.parseInt(temp[0]), tempWSNLocation);
             Log.i(TAG, "update location base "+String.valueOf(temp[0])+" to "+locationBase.get(Integer.parseInt(temp[0])).getLatitude()+","+locationBase.get(Integer.parseInt(temp[0])).getLongitude());
         }
-
     }
 
 
@@ -774,7 +773,7 @@ private SensorEventListener listener=new SensorEventListener() {
 
                 try{
                     Log.i(TAG, "setInterestFilter initiate...");
-                    Name sensorInterest=new Name("/wifi/"+lat+"/"+lng);
+                    Name sensorInterest=new Name("/wifi/"+lat+","+lng+"/"+lat+","+lng);
                     face.registerPrefix(sensorInterest,incomI,new OnRegisterFailed() {
                         public void onRegisterFailed(Name prefix) {
                             Log.i(TAG, "onRegisterFailed:Failed to register the external forwarder: " + prefix.toUri());

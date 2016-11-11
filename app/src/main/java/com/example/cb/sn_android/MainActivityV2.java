@@ -25,7 +25,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.graphics.Point;
-import android.widget.Toast;
 
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
@@ -55,7 +54,7 @@ import java.util.List;
 import java.util.Map;
 
 public class MainActivityV2 extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener,SendInterestTask.Callback {
+        implements NavigationView.OnNavigationItemSelectedListener,SendWSNInterestTask.Callback {
 
 
     private final String TAG="sn-android main";
@@ -93,25 +92,48 @@ public class MainActivityV2 extends AppCompatActivity
         if (data.size()==1) {
             Log.i(TAG, data.get(0).getContent().toString());
             String tempData[] = data.get(0).getContent().toString().split("\\$+");
-            String tp[] = tempData[0].split("/");
-            Button button = new Button(getApplicationContext());
-            button.setBackgroundResource(R.drawable.popup2);
-            InfoWindow.OnInfoWindowClickListener listener = null;
-            button.setText(tp[3] + ": " + tp[4]);
+            String tp1[] = tempData[0].split("/");
+            String tp2[];
+            if (tempData.length<1) {
+                tp2=new String[]{"0","0","0","0","0"};
+
+            }
+
+            else {
+                tp2 = tempData[1].split("/");
+            }
+
+            if(tp1[1].equals(tp2[1])) {
+                Button button = new Button(getApplicationContext());
+                button.setBackgroundResource(R.drawable.popup2);
+                InfoWindow.OnInfoWindowClickListener listener = null;
+                button.setText(tp1[3] + ": " + tp1[4]);
+
+
 //            button.setTextColor(0x0F0F0F);
 //            button.setHintTextColor(0x0F0F0F);
-            //       button.setBackgroundColor( 0x666666 );
-            button.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
+                //       button.setBackgroundColor( 0x666666 );
+                button.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
 //                marker.setIcon(bd);
-                    baiduMap.hideInfoWindow();
-                }
-            });
-            LatLng ll = nodeSet[selectedItem].getPosition();
-            mInfoWindow = new InfoWindow(button, ll, -47);
+                        baiduMap.hideInfoWindow();
+                    }
+                });
+                LatLng ll = nodeSet[selectedItem].getPosition();
+                mInfoWindow = new InfoWindow(button, ll, -47);
+                baiduMap.showInfoWindow(mInfoWindow);
+            }
+            else {
+                AlertDialog.Builder infoDialog= new AlertDialog.Builder(MainActivityV2.this);
+                infoDialog.setTitle("Sensory Data of Selected Node");
+                infoDialog.setItems(tempData,null);
+                infoDialog.setPositiveButton("OK",null);
+                infoDialog.show();
+            }
 
-            baiduMap.showInfoWindow(mInfoWindow);
         }
+
+
         else if (data.size()>1){
             String info[]=new String[data.size()];
             AlertDialog.Builder infoDialog= new AlertDialog.Builder(MainActivityV2.this);
@@ -160,6 +182,13 @@ public class MainActivityV2 extends AppCompatActivity
             infoDialog.setPositiveButton("OK",null);
             infoDialog.show();
 
+        }
+        else if(data.size()==0){
+            AlertDialog.Builder infoDialog=new AlertDialog.Builder(MainActivityV2.this);
+            infoDialog.setTitle("Failed!")
+                    .setPositiveButton("OK",null)
+                    .setMessage("There is no Data come back from sensor device!")
+                    .show();
         }
 
 
@@ -613,7 +642,7 @@ public class MainActivityV2 extends AppCompatActivity
                                             Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
                                             HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
                                             tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"temp"));
-                                            new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                            new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
 
                                         } else if (which == 1) {
@@ -623,7 +652,7 @@ public class MainActivityV2 extends AppCompatActivity
                                             Log.i(TAG, "2_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
                                             HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
                                             tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"light"));
-                                            new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                            new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
 
                                         } else if (which == 2) {
@@ -634,7 +663,7 @@ public class MainActivityV2 extends AppCompatActivity
                                             HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
                                             tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"humidity"));
 //                                                new SendInterestTask().execute(tempHashMap);
-                                            new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                            new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
                                         } else {
                                             Log.i(TAG, "onClick: type is null");
                                         }
@@ -683,7 +712,7 @@ public class MainActivityV2 extends AppCompatActivity
         if (type == 1) {
             //左上角
             pt.x = 0;
-            pt.y = 0;
+            pt.y = statusBarHeight+60;
         }
         if (type == 2) {
             //左下角
@@ -760,7 +789,7 @@ public class MainActivityV2 extends AppCompatActivity
                                             entry.setValue(tempWSNLocation);
                                         }
 
-                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                        new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
 
                                     } else if (which == 1) {
@@ -781,7 +810,7 @@ public class MainActivityV2 extends AppCompatActivity
                                             tempWSNLocation.setDataType("light");
                                             entry.setValue(tempWSNLocation);
                                         }
-                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                        new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
                                     } else if (which == 2) {
 //                                        Bundle tempB = arg0.getExtraInfo();
@@ -802,7 +831,7 @@ public class MainActivityV2 extends AppCompatActivity
                                             tempWSNLocation.setDataType("humidity");
                                             entry.setValue(tempWSNLocation);
                                         }
-                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                        new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
                                     } else {
                                         Log.i(TAG, "onClick: type is null");
                                     }
@@ -852,10 +881,10 @@ public class MainActivityV2 extends AppCompatActivity
 //                                        selectedItem=id[0];
 //                                        Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
                                         HashMap<Integer, WSNLocation> tempHashMap =new HashMap<>();
-                                        LatLng leftDown=getSite(2);
+                                        LatLng leftDown=getSite(1);
                                         String tpLDLat[]=Double.toString(leftDown.latitude).split("\\.");
                                         String tpLDLng[]=Double.toString(leftDown.longitude).split("\\.");
-                                        LatLng rightUp=getSite(3);
+                                        LatLng rightUp=getSite(4);
                                         String tpRULat[]=Double.toString(rightUp.latitude).split("\\.");
                                         String tpRULng[]=Double.toString(rightUp.longitude).split("\\.");
                                         String dataType="temp";
@@ -867,7 +896,7 @@ public class MainActivityV2 extends AppCompatActivity
                                         //HashMap<Integer,WSNLocation> tempHashMap=new HashMap();
                                         tempHashMap.put(1000,tempWSNArea);
 
-                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                        new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
 
                                     } else if (which == 1) {
@@ -880,22 +909,22 @@ public class MainActivityV2 extends AppCompatActivity
 //                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 //
                                         HashMap<Integer, WSNLocation> tempHashMap =new HashMap<>();
-                                        LatLng leftDown=getSite(2);
-                                        String tpLDLat[]=Double.toString(leftDown.latitude).split(".");
-                                        String tpLDLng[]=Double.toString(leftDown.longitude).split(".");
-                                        LatLng rightUp=getSite(3);
-                                        String tpRULat[]=Double.toString(rightUp.latitude).split(".");
-                                        String tpRULng[]=Double.toString(rightUp.longitude).split(".");
+                                        LatLng leftDown=getSite(1);
+                                        String tpLDLat[]=Double.toString(leftDown.latitude).split("\\.");
+                                        String tpLDLng[]=Double.toString(leftDown.longitude).split("\\.");
+                                        LatLng rightUp=getSite(4);
+                                        String tpRULat[]=Double.toString(rightUp.latitude).split("\\.");
+                                        String tpRULng[]=Double.toString(rightUp.longitude).split("\\.");
                                         String dataType="light";
-                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(tpLDLat.length-5,tpLDLat.length-1)),
-                                                Integer.valueOf(tpLDLng[1].substring(tpLDLng.length-4,tpLDLng.length)),
-                                                Integer.valueOf(tpRULat[1].substring(tpRULat.length-4,tpRULat.length)),
-                                                Integer.valueOf(tpRULng[1].substring(tpRULng.length-4,tpRULng.length)),
+                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(2,6)),
+                                                Integer.valueOf(tpLDLng[1].substring(2,6)),
+                                                Integer.valueOf(tpRULat[1].substring(2,6)),
+                                                Integer.valueOf(tpRULng[1].substring(2,6)),
                                                 dataType);
                                         //HashMap<Integer,WSNLocation> tempHashMap=new HashMap();
                                         tempHashMap.put(1000,tempWSNArea);
 
-                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                        new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
                                     } else if (which == 2) {
 //                                        Bundle tempB = arg0.getExtraInfo();
@@ -908,22 +937,22 @@ public class MainActivityV2 extends AppCompatActivity
 //                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
                                         HashMap<Integer, WSNLocation> tempHashMap =new HashMap<>();
-                                        LatLng leftDown=getSite(2);
-                                        String tpLDLat[]=Double.toString(leftDown.latitude).split(".");
-                                        String tpLDLng[]=Double.toString(leftDown.longitude).split(".");
-                                        LatLng rightUp=getSite(3);
-                                        String tpRULat[]=Double.toString(rightUp.latitude).split(".");
-                                        String tpRULng[]=Double.toString(rightUp.longitude).split(".");
+                                        LatLng leftDown=getSite(1);
+                                        String tpLDLat[]=Double.toString(leftDown.latitude).split("\\.");
+                                        String tpLDLng[]=Double.toString(leftDown.longitude).split("\\.");
+                                        LatLng rightUp=getSite(4);
+                                        String tpRULat[]=Double.toString(rightUp.latitude).split("\\.");
+                                        String tpRULng[]=Double.toString(rightUp.longitude).split("\\.");
                                         String dataType="humidity";
-                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(tpLDLat.length-5,tpLDLat.length-1)),
-                                                Integer.valueOf(tpLDLng[1].substring(tpLDLng.length-4,tpLDLng.length)),
-                                                Integer.valueOf(tpRULat[1].substring(tpRULat.length-4,tpRULat.length)),
-                                                Integer.valueOf(tpRULng[1].substring(tpRULng.length-4,tpRULng.length)),
+                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(2,6)),
+                                                Integer.valueOf(tpLDLng[1].substring(2,6)),
+                                                Integer.valueOf(tpRULat[1].substring(2,6)),
+                                                Integer.valueOf(tpRULng[1].substring(2,6)),
                                                 dataType);
                                         //HashMap<Integer,WSNLocation> tempHashMap=new HashMap();
                                         tempHashMap.put(1000,tempWSNArea);
 
-                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                        new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
                                     } else {
                                         Log.i(TAG, "onClick: type is null");
                                     }
