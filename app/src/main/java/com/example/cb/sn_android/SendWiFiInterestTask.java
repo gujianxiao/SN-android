@@ -107,8 +107,8 @@ public class SendWiFiInterestTask extends AsyncTask <HashMap<Integer,WiFiLocatio
             Map.Entry entry=(Map.Entry)iterator.next();
             int key=(int)entry.getKey();
             nodeWiFiLocation =(WiFiLocation)entry.getValue();
-            long currentTimeStart=System.currentTimeMillis();
-            long currentTimeEnd=currentTimeStart-10;
+            long currentTimeStart=System.currentTimeMillis()-5;
+            long currentTimeEnd=currentTimeStart+15;
             Name interestOfNode=new Name("/wifi/"+ nodeWiFiLocation.getLeftDown().latitude+ ","+nodeWiFiLocation.getLeftDown().longitude+"/"+ nodeWiFiLocation.getRightUp().latitude+","+ nodeWiFiLocation.getRightUp().longitude+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWiFiLocation.getDataType() );
             Log.i(TAG, "send interest "+interestOfNode.toString());
             incomingData incomD=new incomingData();

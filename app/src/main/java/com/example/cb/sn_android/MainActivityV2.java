@@ -43,18 +43,23 @@ import com.baidu.mapapi.map.MapView;
 import com.baidu.mapapi.map.Marker;
 import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationData;
+import com.baidu.mapapi.map.OverlayOptions;
+import com.baidu.mapapi.map.Polyline;
+import com.baidu.mapapi.map.PolylineOptions;
 import com.baidu.mapapi.model.LatLng;
 //import com.baidu.mapapi.model.inner.Point;
 
 import net.named_data.jndn.Data;
+import net.named_data.jndn.Node;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 public class MainActivityV2 extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener,SendWSNInterestTask.Callback {
+        implements NavigationView.OnNavigationItemSelectedListener,SendWSNInterestTask.Callback ,RefreshTask.Callback{
 
 
     private final String TAG="sn-android main";
@@ -93,17 +98,9 @@ public class MainActivityV2 extends AppCompatActivity
             Log.i(TAG, data.get(0).getContent().toString());
             String tempData[] = data.get(0).getContent().toString().split("\\$+");
             String tp1[] = tempData[0].split("/");
-            String tp2[];
-            if (tempData.length<1) {
-                tp2=new String[]{"0","0","0","0","0"};
+//            String tp2[];
 
-            }
-
-            else {
-                tp2 = tempData[1].split("/");
-            }
-
-            if(tp1[1].equals(tp2[1])) {
+            if(tempData.length<=1) {
                 Button button = new Button(getApplicationContext());
                 button.setBackgroundResource(R.drawable.popup2);
                 InfoWindow.OnInfoWindowClickListener listener = null;
@@ -191,6 +188,19 @@ public class MainActivityV2 extends AppCompatActivity
                     .show();
         }
 
+
+    }
+
+    @Override
+    public void refreshUI(HashMap<Integer, WSNLocation> location, HashMap<Integer, Integer> topo,String type) {
+        Log.i(TAG, "refreshUI: ");
+        if (type.equals("refreshLocation")){
+            initiateLocation(location);
+        }
+        else if (type.equals("refreshTopo")){
+            initiateLocation(location);
+            initiateTopo(topo);
+        }
 
     }
 
@@ -380,7 +390,86 @@ public class MainActivityV2 extends AppCompatActivity
         mapView = (MapView) findViewById(R.id.map_view);
         baiduMap = mapView.getMap();
         baiduMap.setMyLocationEnabled(true);
+        baiduMap.setOnMarkerClickListener(new BaiduMap.OnMarkerClickListener() {
 
+            @Override
+            public boolean onMarkerClick(final Marker arg0) {
+                // TODO Auto-generated method stub
+                //send Interest of a node
+                final String[] Items={"Temperature","Illumination","humidity"};
+                new AlertDialog.Builder(MainActivityV2.this)
+                        .setTitle("Interest type:")
+                        .setIcon(android.R.drawable.ic_dialog_info)
+                        .setSingleChoiceItems(Items, -1, new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        /*int index=0;
+                                        Log.i(TAG, "click send interest");
+                                        if (which >= 0)
+                                        {
+                                            Log.i(TAG, "choose item!");
+
+                                            //如果单击的是列表项，将当前列表项的索引保存在index中。
+
+                                            //如果想单击列表项后关闭对话框，可在此处调用dialog.cancel()
+
+                                            //或是用dialog.dismiss()方法。
+
+                                            index = which;
+
+                                        }*/
+//                                        if(which==DialogInterface.BUTTON_NEUTRAL){
+                                        //dialog.dismiss();
+                                        if (which == 0) {
+                                            Bundle tempB = arg0.getExtraInfo();
+                                            int id[] = tempB.getIntArray("rl");
+                                            selectedItem=id[0];
+                                            Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+                                            HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
+                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"temp"));
+                                            new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+
+
+                                        } else if (which == 1) {
+                                            Bundle tempB = arg0.getExtraInfo();
+                                            int id[] = tempB.getIntArray("rl");
+                                            selectedItem=id[0];
+                                            Log.i(TAG, "2_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+                                            HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
+                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"light"));
+                                            new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+
+
+                                        } else if (which == 2) {
+                                            Bundle tempB = arg0.getExtraInfo();
+                                            int id[] = tempB.getIntArray("rl");
+                                            selectedItem=id[0];
+                                            Log.i(TAG, "3_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+                                            HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
+                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"humidity"));
+//                                                new SendInterestTask().execute(tempHashMap);
+                                            new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                        } else {
+                                            Log.i(TAG, "onClick: type is null");
+                                        }
+                                        dialog.dismiss();
+                                    }
+                                        /*else if (which==DialogInterface.BUTTON_NEGATIVE){
+                                            Toast.makeText(MainActivityV2.this, "You choose nothing! Try again.",
+
+                                                    Toast.LENGTH_LONG);
+                                        }
+*/
+//                                    }
+                                }
+
+                        )
+                        .setNegativeButton("cancel", null)
+//                        .setPositiveButton("OK", null)
+                        .show();
+                //Toast.makeText(getApplicationContext(), "Marker被点击了！", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
 
 
 
@@ -579,6 +668,8 @@ public class MainActivityV2 extends AppCompatActivity
         Log.i(TAG, "initiateLocation: begining to set node in the map...");
 //        MarkerOptions nodeSet[]=new MarkerOptions[10];
 //        int i=0;
+        mapView.getOverlay().clear();
+        baiduMap.clear();
         Iterator iterator=Base.entrySet().iterator();
         while(iterator.hasNext()) {
             Map.Entry entry = (Map.Entry) iterator.next();
@@ -606,91 +697,36 @@ public class MainActivityV2 extends AppCompatActivity
 //            nodeSet[i].position(new LatLng(latitude,longitude));
 //            baiduMap.addOverlay(nodeSet[i]);
 //        }
-        baiduMap.setOnMarkerClickListener(new BaiduMap.OnMarkerClickListener() {
 
-            @Override
-            public boolean onMarkerClick(final Marker arg0) {
-                // TODO Auto-generated method stub
-                //send Interest of a node
-                final String[] Items={"Temperature","Illumination","humidity"};
-                new AlertDialog.Builder(MainActivityV2.this)
-                        .setTitle("Interest type:")
-                        .setIcon(android.R.drawable.ic_dialog_info)
-                        .setSingleChoiceItems(Items, -1, new DialogInterface.OnClickListener() {
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        /*int index=0;
-                                        Log.i(TAG, "click send interest");
-                                        if (which >= 0)
-                                        {
-                                            Log.i(TAG, "choose item!");
-
-                                            //如果单击的是列表项，将当前列表项的索引保存在index中。
-
-                                            //如果想单击列表项后关闭对话框，可在此处调用dialog.cancel()
-
-                                            //或是用dialog.dismiss()方法。
-
-                                            index = which;
-
-                                        }*/
-//                                        if(which==DialogInterface.BUTTON_NEUTRAL){
-                                        //dialog.dismiss();
-                                        if (which == 0) {
-                                            Bundle tempB = arg0.getExtraInfo();
-                                            int id[] = tempB.getIntArray("rl");
-                                            selectedItem=id[0];
-                                            Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
-                                            HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
-                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"temp"));
-                                            new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
-
-
-                                        } else if (which == 1) {
-                                            Bundle tempB = arg0.getExtraInfo();
-                                            int id[] = tempB.getIntArray("rl");
-                                            selectedItem=id[0];
-                                            Log.i(TAG, "2_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
-                                            HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
-                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"light"));
-                                            new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
-
-
-                                        } else if (which == 2) {
-                                            Bundle tempB = arg0.getExtraInfo();
-                                            int id[] = tempB.getIntArray("rl");
-                                            selectedItem=id[0];
-                                            Log.i(TAG, "3_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
-                                            HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
-                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"humidity"));
-//                                                new SendInterestTask().execute(tempHashMap);
-                                            new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
-                                        } else {
-                                            Log.i(TAG, "onClick: type is null");
-                                        }
-                                        dialog.dismiss();
-                                    }
-                                        /*else if (which==DialogInterface.BUTTON_NEGATIVE){
-                                            Toast.makeText(MainActivityV2.this, "You choose nothing! Try again.",
-
-                                                    Toast.LENGTH_LONG);
-                                        }
-*/
-//                                    }
-                                }
-
-                        )
-                        .setNegativeButton("cancel", null)
-//                        .setPositiveButton("OK", null)
-                        .show();
-                //Toast.makeText(getApplicationContext(), "Marker被点击了！", Toast.LENGTH_SHORT).show();
-                return false;
-            }
-        });
 
     }
 
     public void initiateTopo(HashMap<Integer,Integer> Base){
         //show topo here waiting for finishing later        ...
+        Polyline mPolyline;
+
+        for(int i=0;i<nodeSet.length;i++){
+            if(nodeSet[i]!=null){
+                Bundle tempB=nodeSet[i].getExtraInfo();
+                int id[] = tempB.getIntArray("rl");
+                LatLng p1 =nodeSet[i].getPosition();
+                if(Base.get(id[0])==null) {
+                    continue;
+                }
+                LatLng p2 = nodeSet[Base.get(id[0])].getPosition();
+                List<LatLng> points = new ArrayList<LatLng>();
+                points.add(p1);
+                points.add(p2);
+                OverlayOptions ooPolyline = new PolylineOptions().width(10)
+                        .color(0xAA000000).points(points);
+                mPolyline = (Polyline) baiduMap.addOverlay(ooPolyline);
+            }
+            else continue;
+        }
+
+
+
+
     }
     public int getStatusBarHeight() {
         int result = 0;
@@ -701,6 +737,7 @@ public class MainActivityV2 extends AppCompatActivity
         return result;
     }
 
+    //use to return the latlng of selected area;
     private LatLng getSite(int type) {
 
         dm = new DisplayMetrics();
@@ -743,14 +780,21 @@ public class MainActivityV2 extends AppCompatActivity
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
-
+        Log.i(TAG,item.getItemId()+".................................");
         if (id == R.id.nav_node) {
             // refresh the node location
+            Log.i(TAG, "Start refresh location in the map...");
+            new RefreshTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"refreshLocation");
+
+
+
         } else if (id == R.id.nav_topo) {
             //show topo on the map
+            Log.i(TAG, "Start refresh topo in the map...");
+            new RefreshTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,"refreshTopo");
 
         } else if (id == R.id.nav_getAll) {
-            //send Interest of view
+            //send Interest of all node
             final String[] Items={"Temperature","Illumination","humidity"};
             new AlertDialog.Builder(MainActivityV2.this)
                     .setTitle("Interest type:")
@@ -852,6 +896,7 @@ public class MainActivityV2 extends AppCompatActivity
                     .show();
 
         } else if (id == R.id.nav_getPoint) {
+            //send Interest of selected area
             final String[] Items={"Temperature","Illumination","humidity"};
             new AlertDialog.Builder(MainActivityV2.this)
                     .setTitle("Interest type:")
@@ -1048,6 +1093,7 @@ public class MainActivityV2 extends AppCompatActivity
             Log.i(TAG, "get locationBase from NDN service size is "+locationBase.size());
             topoBase = serviceBinder.getTopoBase();
             Log.i(TAG, "get topoBase from NDN service size is "+topoBase.size());
+
             initiateLocation(locationBase);
             initiateTopo(topoBase);
             Log.i(TAG, "update UI success in mian acitivity!");

@@ -108,8 +108,8 @@ public class SendWSNInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>
             Map.Entry entry=(Map.Entry)iterator.next();
             int key=(int)entry.getKey();
             nodeWSNLocation =(WSNLocation)entry.getValue();
-            long currentTimeStart=System.currentTimeMillis();
-            long currentTimeEnd=currentTimeStart-10;
+            long currentTimeStart=System.currentTimeMillis()/1000;
+            long currentTimeEnd=currentTimeStart+10;
             Name interestOfNode=new Name("/wsn/"+ nodeWSNLocation.getLongitude()+ ","+nodeWSNLocation.getLatitude()+"/"+ nodeWSNLocation.getLongitude()+","+ nodeWSNLocation.getLatitude()+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWSNLocation.getDataType() );
             Log.i(TAG, "send interest "+interestOfNode.toString());
             incomingData incomD=new incomingData();

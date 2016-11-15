@@ -1,0 +1,185 @@
+package com.example.cb.sn_android;
+
+import android.os.AsyncTask;
+import android.os.Handler;
+import android.util.Log;
+
+import net.named_data.jndn.Data;
+import net.named_data.jndn.Face;
+import net.named_data.jndn.Interest;
+import net.named_data.jndn.Name;
+import net.named_data.jndn.OnData;
+import net.named_data.jndn.OnTimeout;
+
+import java.util.HashMap;
+
+/**
+ * Created by cb on 16-11-12.
+ */
+public class RefreshTask extends AsyncTask<String,Integer,Boolean>{
+    private final String TAG="RefreshTask";
+    private Callback callback;
+    private int callbackCount=0;
+    private int dataCount=0;
+    private String type;
+    HashMap<Integer,Integer> topoBase=new HashMap<>();
+    HashMap<Integer,WSNLocation> locationBase=new HashMap<>();
+    private Face face = new Face();
+    incomingData incomD = new incomingData();
+
+
+    public RefreshTask(Callback callback) {
+        this.callback = callback;
+    }
+
+    interface Callback{
+        public void refreshUI(HashMap<Integer,WSNLocation> location,HashMap<Integer,Integer> topo,String type);
+    }
+
+
+    @Override
+    protected void onPreExecute() {
+        super.onPreExecute();
+    }
+
+    @Override
+    protected Boolean doInBackground(String... params) {
+        Log.i(TAG, "doInBackground: start to refresh "+params[0]);
+        type=params[0];
+        if (params[0].equals("refreshLocation")){
+            Name locationRequest =new Name("/wsn/location");
+            try {
+                face.expressInterest(locationRequest, incomD, incomD);
+                Log.i(TAG, "Express name " + locationRequest.toUri());
+                while (callbackCount< 1) {
+
+                    face.processEvents();
+
+                    // We need to sleep for a few milliseconds so we don't use
+                    // 100% of
+
+                    // the CPU.
+
+                    Thread.sleep(10);
+
+                }
+            }
+            catch (Exception e){
+                e.printStackTrace();
+                Log.e(TAG, "doInBackground: Express Interst error!");
+
+            }
+
+
+
+
+        }
+        else if(params[0].equals("refreshTopo")){
+            Name locationRequest =new Name("/wsn/location");
+            Name topoRequest=new Name("/wsn/topo");
+            try {
+                face.expressInterest(locationRequest, incomD, incomD);
+                Log.i(TAG, "Express name " + locationRequest.toUri());
+                face.expressInterest(topoRequest, incomD, incomD);
+                Log.i(TAG, "Express name " + topoRequest.toUri());
+                while (callbackCount< 2) {
+
+                    face.processEvents();
+
+                    // We need to sleep for a few milliseconds so we don't use
+                    // 100% of
+
+                    // the CPU.
+
+                    Thread.sleep(10);
+
+                }
+            }
+            catch (Exception e){
+                e.printStackTrace();
+                Log.e(TAG, "doInBackground: Express Interst error!");
+            }
+        }
+        else {
+            Log.i(TAG, "doInBackground: Wrong argument!");
+        }
+
+
+
+        return null;
+    }
+
+    @Override
+    protected void onProgressUpdate(Integer... values) {
+        super.onProgressUpdate(values);
+    }
+
+    @Override
+    protected void onPostExecute(Boolean aBoolean) {
+        super.onPostExecute(aBoolean);
+        Log.i(TAG, "onPostExecute: execute async task of send interest success!");
+        if(this.callback!=null){
+            this.callback.refreshUI(locationBase,topoBase,type);
+        }
+    }
+
+    private class incomingData implements OnData,OnTimeout {
+        @Override
+        public void onTimeout(Interest interest) {
+            callbackCount++;
+            Log.i(TAG, "Time out for interest:" + interest.getName().toUri());
+        }
+
+        @Override
+        public void onData(Interest interest, Data data) {
+            callbackCount++;
+            dataCount++;
+            Log.i(TAG, "Got data packet with name:" + data.getName().toUri());
+            String msg = data.getContent().toString();
+            Log.i(TAG, "onData: " + msg);
+            if (msg.length()==0) {
+                Log.i(TAG, "Data is null");
+            } else if (msg.length()>0) {
+                    String tempName= data.getName().toString();
+                    if (tempName.equals("/wsn/topo")) {
+                        initiateTopo(msg);
+                    }
+                    else if (tempName.equals("/wsn/location")){
+                        initiateLocation(msg);
+                    }
+                    else {
+                        Log.e(TAG, "onData: Wrong answer from gateway!");
+                    }
+//                registerSignal=1;
+
+            }
+
+
+        }
+
+    }
+
+
+    public void initiateTopo(String msg){
+        Log.i(TAG, "initiateTopo...");
+        String topoSet[]=msg.split("\\$+");
+        for(String topo:topoSet){
+            String temp[]=topo.split("->");
+            topoBase.put(Integer.parseInt(temp[0]),Integer.parseInt(temp[1]));
+            Log.i(TAG, "update topo base "+Integer.parseInt(temp[0])+" to "+topoBase.get(Integer.parseInt(temp[0])));
+        }
+    }
+    public void initiateLocation(String msg){
+        Log.i(TAG, "initiateLocation...");
+        String locationSet[]=msg.split("\\$+");
+        for(String location:locationSet){
+            String temp[]=location.split("->|\\(|\\)|,");
+            WSNLocation tempWSNLocation =new WSNLocation(Integer.parseInt(temp[3]),Integer.parseInt(temp[2]));
+            locationBase.put(Integer.parseInt(temp[0]), tempWSNLocation);
+            Log.i(TAG, "update location base "+String.valueOf(temp[0])+" to "+locationBase.get(Integer.parseInt(temp[0])).getLatitude()+","+locationBase.get(Integer.parseInt(temp[0])).getLongitude());
+        }
+    }
+    
+    
+    
+}
