@@ -46,7 +46,9 @@ public class SendWSNInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>
                 Map.Entry entry = (Map.Entry) iterator.next();
                 int key = (int) entry.getKey();
                 nodeWSNLocation = (WSNLocation) entry.getValue();
-                Name interestOfNode = new Name("/wsn/" + nodeWSNLocation.getLongitude() +","+nodeWSNLocation.getLatitude() +"/"+nodeWSNLocation.getLongitude() +","+nodeWSNLocation.getLatitude()+"/0/10000/"+nodeWSNLocation.getDataType());
+                long currentTimeStart=System.currentTimeMillis()/1000;
+                long currentTimeEnd=currentTimeStart+10;
+                Name interestOfNode = new Name("/wsn/" + nodeWSNLocation.getLongitude() +","+nodeWSNLocation.getLatitude() +"/"+nodeWSNLocation.getLongitude() +","+nodeWSNLocation.getLatitude()+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWSNLocation.getDataType());
                 incomingData incomD = new incomingData();
                 face.expressInterest(interestOfNode, incomD, incomD);
             }
@@ -76,7 +78,9 @@ public class SendWSNInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>
             Map.Entry entry=(Map.Entry)iterator.next();
             int key=(int)entry.getKey();
             nodeWSNLocation =(WSNLocation)entry.getValue();
-            Name interestOfNode=new Name("/wsn/"+ nodeWSNLocation.getLeftDownLng()+ ","+nodeWSNLocation.getLeftDownLat()+"/"+ nodeWSNLocation.getRightUpLng()+","+ nodeWSNLocation.getRightUpLat()+"/0/10000/"+nodeWSNLocation.getDataType() );
+            long currentTimeStart=System.currentTimeMillis()/1000;
+            long currentTimeEnd=currentTimeStart+10;
+            Name interestOfNode=new Name("/wsn/"+ nodeWSNLocation.getLeftDownLng()+ ","+nodeWSNLocation.getLeftDownLat()+"/"+ nodeWSNLocation.getRightUpLng()+","+ nodeWSNLocation.getRightUpLat()+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWSNLocation.getDataType() );
             Log.i(TAG, "send interest "+interestOfNode.toString());
             incomingData incomD=new incomingData();
             try {

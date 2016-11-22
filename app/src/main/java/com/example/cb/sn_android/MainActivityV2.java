@@ -75,6 +75,7 @@ public class MainActivityV2 extends AppCompatActivity
     private DisplayMetrics dm ;
     private LatLng latLng;
     String serverAddress;
+    String userName;
 
     public LocationClient mLocationClient = null;
     public BDLocationListener myListener = new MyLocationListener();
@@ -281,6 +282,7 @@ public class MainActivityV2 extends AppCompatActivity
                         ;
 // 设置定位数据
                 baiduMap.setMyLocationData(locData);
+         //       mMapView.refresh();
                 Log.i(TAG, "set my location on map success!!");
                 //设置当前位置为中心
 
@@ -312,6 +314,8 @@ public class MainActivityV2 extends AppCompatActivity
             }
 
         }
+
+
     }
 
     //initiate location  mode
@@ -346,7 +350,7 @@ public class MainActivityV2 extends AppCompatActivity
 
 
         Intent intent=getIntent();
-        String userName=intent.getStringExtra("userName");
+        userName=intent.getStringExtra("userName");
         Log.i(TAG, "get user name:"+userName);
         serverAddress=intent.getStringExtra("serverAddress");
         Log.i(TAG, "get server address:"+serverAddress);
@@ -1074,7 +1078,7 @@ public class MainActivityV2 extends AppCompatActivity
             int tryTime=0;
 
             do{
-                tagOfBind=serviceBinder.startBind(latLng,serverAddress);
+                tagOfBind=serviceBinder.startBind(userName,latLng,serverAddress);
                 try {
                     Thread.sleep(1000);
                 }

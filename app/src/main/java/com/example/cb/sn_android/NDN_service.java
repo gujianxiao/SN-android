@@ -14,6 +14,16 @@ import android.os.StrictMode;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.baidu.location.BDLocation;
+import com.baidu.location.BDLocationListener;
+import com.baidu.location.LocationClient;
+import com.baidu.location.LocationClientOption;
+import com.baidu.location.Poi;
+import com.baidu.mapapi.map.BaiduMap;
+import com.baidu.mapapi.map.MapStatusUpdate;
+import com.baidu.mapapi.map.MapStatusUpdateFactory;
+import com.baidu.mapapi.map.MapView;
+import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
 import com.google.protobuf.ByteString;
 
@@ -48,9 +58,10 @@ import net.named_data.jndn.util.SegmentFetcher;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.List;
 
 /**
- * Created by cb on 16-9-26.NDN_Servie class provide NDN service for SN-android. 
+ * Created by cb on 16-9-26.NDN_Servie class provide NDN service for SN-android.
  * Including register to the IOT gateway, send/receive Interest and receive/send Data.
  */
 public class NDN_service extends Service{
@@ -62,10 +73,17 @@ public class NDN_service extends Service{
     public int callbackCount= 0;
     private  int registerSignal=1;
     private LatLng deviceLatLng;
+    private String userID;
     private ServiceBinder serviceBinder=new ServiceBinder();
     private String HOST;
     private int PORT=6353;
 
+
+    private MapView mapView;
+    private BaiduMap baiduMap;
+    public LocationClient mLocationClient = null;
+    public BDLocationListener myListener = new MyLocationListener();
+    public BDLocation BaiduLocation;
 
 
 
@@ -74,20 +92,20 @@ public class NDN_service extends Service{
     private Sensor temperature;
     private Sensor accelerometer;
     private String sensorValue;
-//    private SensorEventListener listener;
-private SensorEventListener listener=new SensorEventListener() {
-    @Override
-    public void onSensorChanged(SensorEvent sensorEvent) {
-        float value=sensorEvent.values[0];
-        Log.i(TAG, "onSensorChanged: value is:"+value);
-        sensorValue=Float.toString(value);
-    }
+    //    private SensorEventListener listener;
+    private SensorEventListener listener=new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent sensorEvent) {
+            float value=sensorEvent.values[0];
+            Log.i(TAG, "onSensorChanged: value is:"+value);
+            sensorValue=Float.toString(value);
+        }
 
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int i) {
 
-    }
-};
+        }
+    };
 
 
     HashMap<Integer,Integer> topoBase=new HashMap<>();
@@ -156,6 +174,133 @@ private SensorEventListener listener=new SensorEventListener() {
             //Log.i(TAG, "register in gateway failed!");
         }
     }
+
+    public class MyLocationListener implements BDLocationListener {
+
+        @Override
+        public void onReceiveLocation(BDLocation location) {
+            //Receive Location
+            BaiduLocation=location;
+
+            StringBuffer sb = new StringBuffer(256);
+            sb.append("time : ");
+            sb.append(location.getTime());
+            sb.append("\nerror code : ");
+            sb.append(location.getLocType());
+            sb.append("\nlatitude : ");
+            sb.append(location.getLatitude());
+            sb.append("\nlontitude : ");
+            sb.append(location.getLongitude());
+            sb.append("\nradius : ");
+            sb.append(location.getRadius());
+            if (location.getLocType() == BDLocation.TypeGpsLocation) {// GPS定位结果
+                sb.append("\nspeed : ");
+                sb.append(location.getSpeed());// 单位：公里每小时
+                sb.append("\nsatellite : ");
+                sb.append(location.getSatelliteNumber());
+                sb.append("\nheight : ");
+                sb.append(location.getAltitude());// 单位：米
+                sb.append("\ndirection : ");
+                sb.append(location.getDirection());// 单位度
+                sb.append("\naddr : ");
+                sb.append(location.getAddrStr());
+                sb.append("\ndescribe : ");
+                sb.append("gps定位成功");
+
+            } else if (location.getLocType() == BDLocation.TypeNetWorkLocation) {// 网络定位结果
+                sb.append("\naddr : ");
+                sb.append(location.getAddrStr());
+                //运营商信息
+                sb.append("\noperationers : ");
+                sb.append(location.getOperators());
+                sb.append("\ndescribe : ");
+                sb.append("网络定位成功");
+            } else if (location.getLocType() == BDLocation.TypeOffLineLocation) {// 离线定位结果
+                sb.append("\ndescribe : ");
+                sb.append("离线定位成功，离线定位结果也是有效的");
+            } else if (location.getLocType() == BDLocation.TypeServerError) {
+                sb.append("\ndescribe : ");
+                sb.append("服务端网络定位失败，可以反馈IMEI号和大体定位时间到loc-bugs@baidu.com，会有人追查原因");
+            } else if (location.getLocType() == BDLocation.TypeNetWorkException) {
+                sb.append("\ndescribe : ");
+                sb.append("网络不同导致定位失败，请检查网络是否通畅");
+            } else if (location.getLocType() == BDLocation.TypeCriteriaException) {
+                sb.append("\ndescribe : ");
+                sb.append("无法获取有效定位依据导致定位失败，一般是由于手机的原因，处于飞行模式下一般会造成这种结果，可以试着重启手机");
+            }
+            sb.append("\nlocationdescribe : ");
+            sb.append(location.getLocationDescribe());// 位置语义化信息
+            List<Poi> list = location.getPoiList();// POI数据
+            if (list != null) {
+                sb.append("\npoilist size = : ");
+                sb.append(list.size());
+                for (Poi p : list) {
+                    sb.append("\npoi= : ");
+                    sb.append(p.getId() + " " + p.getName() + " " + p.getRank());
+                }
+            }
+            Log.i("BaiduLocationApiDem", sb.toString());
+
+
+
+            //显示当前位置
+            if(BaiduLocation!=null) {
+                MyLocationData locData = new MyLocationData.Builder().accuracy(BaiduLocation.getRadius())                // 此处设置开发者获取到的方向信息，顺时针0-360
+                        .direction(100).latitude(BaiduLocation.getLatitude())
+                        .longitude(BaiduLocation.getLongitude()).build()
+
+                        ;
+// 设置定位数据
+//                baiduMap.setMyLocationData(locData);
+                //       mMapView.refresh();
+                Log.i(TAG, "set my location on map success!!");
+                //设置当前位置为中心
+
+            }
+            else {
+                Log.i(TAG, "BaiduLocation==null!!");
+            }
+        }
+
+
+    }
+
+
+
+
+    //initiate location  mode
+    private void initLocation(){
+        LocationClientOption option = new LocationClientOption();
+        option.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy
+        );//可选，默认高精度，设置定位模式，高精度，低功耗，仅设备
+        option.setCoorType("bd09ll");//可选，默认gcj02，设置返回的定位结果坐标系
+//        option.setCoorType("gcj02");
+        int span=1000;
+        option.setScanSpan(span);//可选，默认0，即仅定位一次，设置发起定位请求的间隔需要大于等于1000ms才是有效的
+        option.setIsNeedAddress(true);//可选，设置是否需要地址信息，默认不需要
+        option.setOpenGps(true);//可选，默认false,设置是否使用gps
+        option.setLocationNotify(true);//可选，默认false，设置是否当GPS有效时按照1S/1次频率输出GPS结果
+        option.setIsNeedLocationDescribe(true);//可选，默认false，设置是否需要位置语义化结果，可以在BDLocation.getLocationDescribe里得到，结果类似于“在北京天安门附近”
+        option.setIsNeedLocationPoiList(true);//可选，默认false，设置是否需要POI结果，可以在BDLocation.getPoiList里得到
+        option.setIgnoreKillProcess(false);//可选，默认true，定位SDK内部是一个SERVICE，并放到了独立进程，设置是否在stop的时候杀死这个进程，默认不杀死
+        option.SetIgnoreCacheException(false);//可选，默认false，设置是否收集CRASH信息，默认收集
+        option.setEnableSimulateGps(false);//可选，默认false，设置是否需要过滤GPS仿真结果，默认需要
+        mLocationClient.setLocOption(option);
+    }
+
+//    public Boolean isBelongto(WiFiLocation location,WiFiLocation area){
+//        if (location.getLeftDown().latitude>=area.getLeftDown().latitude&&location.getLeftDown().longitude>=area.getLeftDown().longitude
+//             &&location.getRightUp().latitude<=area.getRightUp().latitude&&location.getRightUp().longitude<=area.getRightUp().longitude
+//                )
+//        {
+//            return true;
+//        }
+//        else
+//            return false;
+//    }
+
+
+
     //dealing with incoming Interest and package the data then send back to gateway
     private  class incomingInterest implements OnInterestCallback{
         @Override
@@ -164,21 +309,47 @@ private SensorEventListener listener=new SensorEventListener() {
             /*
             Dealing with interest and package the data here...
              */
+            //get location of device for every incoming interest
+            mLocationClient = new LocationClient(getApplicationContext());     //声明LocationClient类
+            mLocationClient.registerLocationListener( myListener );    //注册监听函数
+            initLocation();//初始化
+            mLocationClient.start();//开始获取服务
+// judge if device in the area interest ask for
+ //           LatLng tempLatLng = new LatLng(BaiduLocation.getLatitude(), BaiduLocation.getLongitude());
+            String temp[]=interest.getName().toString().split("/");
+            if (BaiduLocation==null){
+                Log.e(TAG, "onInterest: BaiduLocation located failed!" );
+                return;
+            }
+            else {
+                String tpLeftDown[]=temp[2].split(",");
+                String tpRightUp[]=temp[3].split(",");
+                if (!(Double.valueOf(tpLeftDown[0])<=BaiduLocation.getLatitude()&&Double.valueOf(tpLeftDown[1])<=BaiduLocation.getLongitude()
+                    &&Double.valueOf(tpRightUp[0])>=BaiduLocation.getLatitude()&&Double.valueOf(tpRightUp[1])>=BaiduLocation.getLongitude()
+                        ))
+                {
+                    return;
+                }
+            }
+
+
             try {
                 sensorManager=(SensorManager)getSystemService(Context.SENSOR_SERVICE);
                 light =sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
                 temperature=sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
                 accelerometer=sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-
+                long currentTimeStart=System.currentTimeMillis()/1000;
+                long currentTimeEnd=currentTimeStart+10;
 
                 Name tempName=interest.getName();
-                String temp[]=interest.getName().toString().split("/");
+//                String temp[]=interest.getName().toString().split("/");
                 MetaInfo metaInfo=new MetaInfo();
                 metaInfo.setFreshnessPeriod(10000);
                 if (temp[temp.length-1].equals("temp")){
                     sensorManager.registerListener(listener,temperature,SensorManager.SENSOR_DELAY_UI);
                     Data backData=new Data(tempName);
-                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+"/temp/"+sensorValue);
+//                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+currentTimeStart+currentTimeEnd+"/temp/"+sensorValue);
+                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+currentTimeStart+currentTimeEnd+"/temp/"+sensorValue);
                     backData.setContent(blob);
                     backData.setMetaInfo(metaInfo);
                     face.putData(backData);
@@ -186,7 +357,8 @@ private SensorEventListener listener=new SensorEventListener() {
                 else if (temp[temp.length-1].equals("light")){
                     sensorManager.registerListener(listener,light,SensorManager.SENSOR_DELAY_UI);
                     Data backData=new Data(tempName);
-                    Blob blob=new Blob("/"+deviceLatLng.latitude+"," +deviceLatLng.longitude+"/light/"+sensorValue);
+//                    Blob blob=new Blob("/"+deviceLatLng.latitude+"," +deviceLatLng.longitude+currentTimeStart+currentTimeEnd+"/light/"+sensorValue);
+                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+currentTimeStart+currentTimeEnd+"/temp/"+sensorValue);
                     backData.setContent(blob);
                     backData.setMetaInfo(metaInfo);
                     face.putData(backData);
@@ -194,7 +366,8 @@ private SensorEventListener listener=new SensorEventListener() {
                 else if (temp[temp.length-1].equals("acceler")){
                     sensorManager.registerListener(listener,accelerometer,SensorManager.SENSOR_DELAY_UI);
                     Data backData=new Data(tempName);
-                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+"/acceler/"+sensorValue);
+//                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+currentTimeStart+currentTimeEnd+"/acceler/"+sensorValue);
+                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+currentTimeStart+currentTimeEnd+"/temp/"+sensorValue);
                     backData.setContent(blob);
                     backData.setMetaInfo(metaInfo);
                     face.putData(backData);
@@ -209,8 +382,9 @@ private SensorEventListener listener=new SensorEventListener() {
                 Log.i(TAG, "send data exception:"+e.getMessage());
                 e.printStackTrace();
             }
-
+            mLocationClient.stop();
         }
+
     }
 
 
@@ -731,17 +905,19 @@ private SensorEventListener listener=new SensorEventListener() {
 
 
     public class ServiceBinder extends Binder {
-        public boolean startBind(LatLng ll, String serverAddress) {
+        public boolean startBind(String userName,LatLng ll, String serverAddress) {
 
 
 
             deviceLatLng=ll;
             HOST=serverAddress;
+            userID=userName;
             //set HOST uri;
             registerUri= "udp4://"+HOST+":6363";
             Log.i(TAG, "Start binding NDN service...success!");
-            Log.i(TAG, "get latlng argument:"+deviceLatLng.toString());
-            Log.i(TAG, "get serverAddress argument:"+HOST);
+            Log.i(TAG, "get userID argument: "+userID);
+            Log.i(TAG, "get latlng argument: "+deviceLatLng.toString());
+            Log.i(TAG, "get serverAddress argument: "+HOST);
 
 
 
@@ -752,13 +928,13 @@ private SensorEventListener listener=new SensorEventListener() {
             double lat=deviceLatLng.latitude;
             double lng=deviceLatLng.longitude;
             //set filter of this device
-            deviceName=new Name("/wifi/register/"+lat+"/"+lng);
+            deviceName=new Name("/wifi/register/"+userID);
 //            Name incomInName=new Name(deviceName);
             Log.i(TAG, "name initiate");
 
             //register route in NFD
 
-            
+
 
 
 
@@ -773,10 +949,10 @@ private SensorEventListener listener=new SensorEventListener() {
 
                 try{
                     Log.i(TAG, "setInterestFilter initiate...");
-                    Name sensorInterest=new Name("/wifi/"+lat+","+lng+"/"+lat+","+lng);
+                    Name sensorInterest=new Name("/wifi/");
                     face.registerPrefix(sensorInterest,incomI,new OnRegisterFailed() {
                         public void onRegisterFailed(Name prefix) {
-                            Log.i(TAG, "onRegisterFailed:Failed to register the external forwarder: " + prefix.toUri());
+                            Log.i(TAG, "onRegisterFailed: Failed to register the external forwarder: " + prefix.toUri());
                             System.exit(1);
                         }
                     });
@@ -895,18 +1071,18 @@ private SensorEventListener listener=new SensorEventListener() {
                     face.expressInterest(deviceName, incomD, incomD);
                     Log.i(TAG, "Express name " + deviceName.toUri());
 
-                        while (callbackCount< 3) {
+                    while (callbackCount< 3) {
 
-                            face.processEvents();
+                        face.processEvents();
 
-                            // We need to sleep for a few milliseconds so we don't use
-                            // 100% of
+                        // We need to sleep for a few milliseconds so we don't use
+                        // 100% of
 
-                            // the CPU.
+                        // the CPU.
 
-                            Thread.sleep(10);
+                        Thread.sleep(10);
 
-                        }
+                    }
 
 
                 } catch (IOException e) {
@@ -951,10 +1127,10 @@ private SensorEventListener listener=new SensorEventListener() {
 
                 }
             }
-           catch (Exception e){
-               Log.e(TAG, "doInBackground: initialize face process event failed..." );
-               e.printStackTrace();
-           }
+            catch (Exception e){
+                Log.e(TAG, "doInBackground: initialize face process event failed..." );
+                e.printStackTrace();
+            }
             return null;
         }
     }
@@ -966,6 +1142,5 @@ private SensorEventListener listener=new SensorEventListener() {
         return serviceBinder;
     }
 }
-
 
 

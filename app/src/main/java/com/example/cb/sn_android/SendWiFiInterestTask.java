@@ -45,7 +45,9 @@ public class SendWiFiInterestTask extends AsyncTask <HashMap<Integer,WiFiLocatio
                     Map.Entry entry = (Map.Entry) iterator.next();
                     int key = (int) entry.getKey();
                     nodeWiFiLocation = (WiFiLocation) entry.getValue();
-                    Name interestOfNode = new Name("/wifi/" + nodeWiFiLocation.getLeftDown().latitude +","+nodeWiFiLocation.getLeftDown().longitude+"/"+nodeWiFiLocation.getRightUp().latitude+","+nodeWiFiLocation.getRightUp().longitude+"/0/10000/"+nodeWiFiLocation.getDataType());
+                    long currentTimeStart=System.currentTimeMillis()-5;
+                    long currentTimeEnd=currentTimeStart+15;
+                    Name interestOfNode = new Name("/wifi/" + nodeWiFiLocation.getLeftDown().latitude +","+nodeWiFiLocation.getLeftDown().longitude+"/"+nodeWiFiLocation.getRightUp().latitude+","+nodeWiFiLocation.getRightUp().longitude+"/"+currentTimeStart+"/"+currentTimeEnd+nodeWiFiLocation.getDataType());
                     incomingData incomD = new incomingData();
                     face.expressInterest(interestOfNode, incomD, incomD);
                 }
@@ -75,7 +77,9 @@ public class SendWiFiInterestTask extends AsyncTask <HashMap<Integer,WiFiLocatio
             Map.Entry entry=(Map.Entry)iterator.next();
             int key=(int)entry.getKey();
             nodeWiFiLocation =(WiFiLocation)entry.getValue();
-            Name interestOfNode=new Name("/wifi/"+ nodeWiFiLocation.getLeftDown().latitude+ ","+nodeWiFiLocation.getLeftDown().longitude+"/"+ nodeWiFiLocation.getRightUp().latitude+","+ nodeWiFiLocation.getRightUp().longitude+"/0/10000/"+nodeWiFiLocation.getDataType() );
+            long currentTimeStart=System.currentTimeMillis()-5;
+            long currentTimeEnd=currentTimeStart+15;
+            Name interestOfNode=new Name("/wifi/"+ nodeWiFiLocation.getLeftDown().latitude+ ","+nodeWiFiLocation.getLeftDown().longitude+"/"+ nodeWiFiLocation.getRightUp().latitude+","+ nodeWiFiLocation.getRightUp().longitude+"/"+currentTimeStart+"/"+currentTimeEnd+nodeWiFiLocation.getDataType() );
             Log.i(TAG, "send interest "+interestOfNode.toString());
             incomingData incomD=new incomingData();
             try {

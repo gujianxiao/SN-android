@@ -39,6 +39,7 @@ public class MainActivity extends AppCompatActivity{
     private Button sendInterest;
     private LatLng latLng;
     String serverAddress;
+    String userName;
 
 
 
@@ -49,7 +50,7 @@ public class MainActivity extends AppCompatActivity{
         SDKInitializer.initialize(getApplicationContext());
         setContentView(R.layout.activity_main);
         Intent intent=getIntent();
-        String userName=intent.getStringExtra("userName");
+        userName=intent.getStringExtra("userName");
         Log.i(TAG, "get user name:"+userName);
         serverAddress=intent.getStringExtra("serverAddress");
         Log.i(TAG, "get server address:"+serverAddress);
@@ -191,7 +192,7 @@ public class MainActivity extends AppCompatActivity{
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             serviceBinder=(NDN_service.ServiceBinder)iBinder;
-            serviceBinder.startBind(latLng,serverAddress);
+            serviceBinder.startBind(userName,latLng,serverAddress);
         }
     };
 
