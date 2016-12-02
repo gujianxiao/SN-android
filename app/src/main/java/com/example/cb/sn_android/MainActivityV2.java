@@ -211,7 +211,7 @@ public class MainActivityV2 extends AppCompatActivity
         public void onReceiveLocation(BDLocation location) {
             //Receive Location
             BaiduLocation=location;
-
+            //Log.i(TAG, "onReceiveLocation: get in func...");
             StringBuffer sb = new StringBuffer(256);
             sb.append("time : ");
             sb.append(location.getTime());
@@ -223,6 +223,7 @@ public class MainActivityV2 extends AppCompatActivity
             sb.append(location.getLongitude());
             sb.append("\nradius : ");
             sb.append(location.getRadius());
+//            Log.i(TAG, "onReceiveLocation: "+location.getLocType());
             if (location.getLocType() == BDLocation.TypeGpsLocation) {// GPS定位结果
                 sb.append("\nspeed : ");
                 sb.append(location.getSpeed());// 单位：公里每小时
@@ -269,7 +270,7 @@ public class MainActivityV2 extends AppCompatActivity
                     sb.append(p.getId() + " " + p.getName() + " " + p.getRank());
                 }
             }
-            Log.i("BaiduLocationApiDem", sb.toString());
+//            Log.i("BaiduLocationApiDem", sb.toString());
 
 
 
@@ -283,7 +284,7 @@ public class MainActivityV2 extends AppCompatActivity
 // 设置定位数据
                 baiduMap.setMyLocationData(locData);
          //       mMapView.refresh();
-                Log.i(TAG, "set my location on map success!!");
+//                Log.i(TAG, "set my location on map success!!");
                 //设置当前位置为中心
 
             }
@@ -292,6 +293,7 @@ public class MainActivityV2 extends AppCompatActivity
             }
             if(isFirstLocate){
                 if(BaiduLocation!=null) {
+                    Log.i("BaiduLocationApiDem", sb.toString());
                     Log.i(TAG, "This is first locate!");
                     latLng = new LatLng(BaiduLocation.getLatitude(), BaiduLocation.getLongitude());
                     Log.i(TAG, "My location is " + latLng.toString());
@@ -305,12 +307,13 @@ public class MainActivityV2 extends AppCompatActivity
 //                    baiduMap.animateMapStatus(update);
                     isFirstLocate = false;
                 }
-                else {
+              else {
                     Log.i(TAG, "BaiduLocation is null!");
                 }
+//                }
             }
             else {
-                Log.i(TAG, "This is not first locate!");
+                //Log.i(TAG, "This is not first locate!");
             }
 
         }
@@ -387,10 +390,12 @@ public class MainActivityV2 extends AppCompatActivity
         mLocationClient.registerLocationListener( myListener );    //注册监听函数
         initLocation();//初始化
         mLocationClient.start();//开始获取服务
+        Log.i(TAG, "get location service: "+mLocationClient.isStarted());
 
 
 
         //Baidu map initialize
+        Log.i(TAG, "start show map:");
         mapView = (MapView) findViewById(R.id.map_view);
         baiduMap = mapView.getMap();
         baiduMap.setMyLocationEnabled(true);
@@ -548,7 +553,7 @@ public class MainActivityV2 extends AppCompatActivity
 //        });
 
 
-
+//        mLocationClient.stop();
     }
 
 
@@ -691,7 +696,7 @@ public class MainActivityV2 extends AppCompatActivity
             tempBundle.putIntArray("rl",tempD);
             nodeSet[i].extraInfo(tempBundle);
             baiduMap.addOverlay(nodeSet[i]);
-            baiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(new MapStatus.Builder().zoom(20).build()));
+            baiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(new MapStatus.Builder().zoom(19).build()));
         }
 
 

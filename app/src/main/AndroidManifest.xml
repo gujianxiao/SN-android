@@ -58,6 +58,9 @@
 
         <service android:name=".NDN_service" />
 
+        <service android:name="com.baidu.location.f" android:enabled="true" android:process=":remote">
+        </service>
+
         <activity
             android:name=".MainActivity"
             android:label="SN-android" />

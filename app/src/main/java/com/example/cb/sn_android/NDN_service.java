@@ -10,6 +10,7 @@ import android.hardware.SensorManager;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.StrictMode;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -91,14 +92,29 @@ public class NDN_service extends Service{
     private Sensor light;
     private Sensor temperature;
     private Sensor accelerometer;
-    private String sensorValue;
+    private String sensorType;
+    private String sensorValueOfTemp;
+    private String sensorValueOfLight;
+    private String sensorValueOfAcceler;
     //    private SensorEventListener listener;
     private SensorEventListener listener=new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent sensorEvent) {
             float value=sensorEvent.values[0];
-            Log.i(TAG, "onSensorChanged: value is:"+value);
-            sensorValue=Float.toString(value);
+            if (sensorType.equals("temp")) {
+                Log.i(TAG, "onSensorChanged: type is " + sensorType + ", value is:" + value);
+                sensorValueOfTemp = Float.toString(value);
+            }
+            else if (sensorType.equals("light")){
+                Log.i(TAG, "onSensorChanged: type is " + sensorType + ", value is:" + value);
+                sensorValueOfLight = Float.toString(value);
+            }
+            else if (sensorType.equals("acceler")){
+                Log.i(TAG, "onSensorChanged: type is " + sensorType + ", value is:" + value);
+                sensorValueOfAcceler = "x:"+Float.toString(sensorEvent.values[0]);
+                sensorValueOfAcceler+=" y:"+Float.toString(sensorEvent.values[1]);
+                sensorValueOfAcceler+=" z:"+Float.toString(sensorEvent.values[2]);
+            }
         }
 
         @Override
@@ -124,6 +140,7 @@ public class NDN_service extends Service{
     public void initiateLocation(String msg){
         Log.i(TAG, "initiateLocation...");
         String locationSet[]=msg.split("\\$+");
+
         for(String location:locationSet){
             String temp[]=location.split("->|\\(|\\)|,");
             WSNLocation tempWSNLocation =new WSNLocation(Integer.parseInt(temp[3]),Integer.parseInt(temp[2]));
@@ -239,7 +256,7 @@ public class NDN_service extends Service{
                     sb.append(p.getId() + " " + p.getName() + " " + p.getRank());
                 }
             }
-            Log.i("BaiduLocationApiDem", sb.toString());
+ //           Log.i("BaiduLocationApiDem", sb.toString());
 
 
 
@@ -253,9 +270,8 @@ public class NDN_service extends Service{
 // 设置定位数据
 //                baiduMap.setMyLocationData(locData);
                 //       mMapView.refresh();
-                Log.i(TAG, "set my location on map success!!");
+ //               Log.i(TAG, "get my location success!!");
                 //设置当前位置为中心
-
             }
             else {
                 Log.i(TAG, "BaiduLocation==null!!");
@@ -310,10 +326,7 @@ public class NDN_service extends Service{
             Dealing with interest and package the data here...
              */
             //get location of device for every incoming interest
-            mLocationClient = new LocationClient(getApplicationContext());     //声明LocationClient类
-            mLocationClient.registerLocationListener( myListener );    //注册监听函数
-            initLocation();//初始化
-            mLocationClient.start();//开始获取服务
+
 // judge if device in the area interest ask for
  //           LatLng tempLatLng = new LatLng(BaiduLocation.getLatitude(), BaiduLocation.getLongitude());
             String temp[]=interest.getName().toString().split("/");
@@ -322,8 +335,8 @@ public class NDN_service extends Service{
                 return;
             }
             else {
-                String tpLeftDown[]=temp[2].split(",");
-                String tpRightUp[]=temp[3].split(",");
+                String tpLeftDown[]=temp[2].split("%2C");
+                String tpRightUp[]=temp[3].split("%2C");
                 if (!(Double.valueOf(tpLeftDown[0])<=BaiduLocation.getLatitude()&&Double.valueOf(tpLeftDown[1])<=BaiduLocation.getLongitude()
                     &&Double.valueOf(tpRightUp[0])>=BaiduLocation.getLatitude()&&Double.valueOf(tpRightUp[1])>=BaiduLocation.getLongitude()
                         ))
@@ -334,10 +347,8 @@ public class NDN_service extends Service{
 
 
             try {
-                sensorManager=(SensorManager)getSystemService(Context.SENSOR_SERVICE);
-                light =sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
-                temperature=sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
-                accelerometer=sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+
+
                 long currentTimeStart=System.currentTimeMillis()/1000;
                 long currentTimeEnd=currentTimeStart+10;
 
@@ -346,43 +357,57 @@ public class NDN_service extends Service{
                 MetaInfo metaInfo=new MetaInfo();
                 metaInfo.setFreshnessPeriod(10000);
                 if (temp[temp.length-1].equals("temp")){
+                    sensorType="temp";
                     sensorManager.registerListener(listener,temperature,SensorManager.SENSOR_DELAY_UI);
                     Data backData=new Data(tempName);
 //                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+currentTimeStart+currentTimeEnd+"/temp/"+sensorValue);
-                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+currentTimeStart+currentTimeEnd+"/temp/"+sensorValue);
+                    Blob blob=new Blob("/"+BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+","+currentTimeEnd+"/temp/"+sensorValueOfTemp);
                     backData.setContent(blob);
                     backData.setMetaInfo(metaInfo);
                     face.putData(backData);
+                    Log.i(TAG, "send Data:"+backData.getContent()+" of Interest"+interest.getName()+" success!");
+
                 }
                 else if (temp[temp.length-1].equals("light")){
+                    sensorType="light";
                     sensorManager.registerListener(listener,light,SensorManager.SENSOR_DELAY_UI);
                     Data backData=new Data(tempName);
 //                    Blob blob=new Blob("/"+deviceLatLng.latitude+"," +deviceLatLng.longitude+currentTimeStart+currentTimeEnd+"/light/"+sensorValue);
-                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+currentTimeStart+currentTimeEnd+"/temp/"+sensorValue);
+                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+","+currentTimeEnd+"/light/"+sensorValueOfLight);
                     backData.setContent(blob);
                     backData.setMetaInfo(metaInfo);
                     face.putData(backData);
+                    Log.i(TAG, "send Data:"+backData.getContent()+" of Interest"+interest.getName()+" success!");
                 }
                 else if (temp[temp.length-1].equals("acceler")){
+                    sensorType="acceler";
                     sensorManager.registerListener(listener,accelerometer,SensorManager.SENSOR_DELAY_UI);
                     Data backData=new Data(tempName);
 //                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+currentTimeStart+currentTimeEnd+"/acceler/"+sensorValue);
-                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+currentTimeStart+currentTimeEnd+"/temp/"+sensorValue);
+                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+","+currentTimeEnd+"/acceler/"+sensorValueOfAcceler);
                     backData.setContent(blob);
                     backData.setMetaInfo(metaInfo);
                     face.putData(backData);
+                    Log.i(TAG, "send Data:"+backData.getContent()+" of Interest"+interest.getName()+" success!");
                 }
+                else if (temp[temp.length-1].equals("location")){
+                    Data backData=new Data(tempName);
+//                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+currentTimeStart+currentTimeEnd+"/acceler/"+sensorValue);
+                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+","+currentTimeEnd+"/"+sensorValueOfAcceler);
+                    backData.setContent(blob);
+                    backData.setMetaInfo(metaInfo);
+                    face.putData(backData);
+                    Log.i(TAG, "send Data:"+backData.getContent()+" of Interest"+interest.getName()+" success!");
+                }
+//                    sensorManager.unregisterListener(listener);
 
-                if (sensorManager!=null){
-                    sensorManager.unregisterListener(listener);
-                }
 
             }
             catch (Exception e){
                 Log.i(TAG, "send data exception:"+e.getMessage());
                 e.printStackTrace();
             }
-            mLocationClient.stop();
+
         }
 
     }
@@ -415,7 +440,22 @@ public class NDN_service extends Service{
 
         //face = new Face(HOST,PORT);//temporary face name of gateway
         face = new Face();//temporary face name of gateway
+//        Looper.prepare();
+        //get location client of map for locating
+        mLocationClient = new LocationClient(getApplicationContext());     //声明LocationClient类
+        mLocationClient.registerLocationListener( myListener );    //注册监听函数
+        initLocation();//初始化
+        mLocationClient.start();//开始获取服务
+        Log.i(TAG, "location client start: "+mLocationClient.isStarted());
 
+        //get sensor service of device for sensory data
+        sensorManager=(SensorManager)getSystemService(Context.SENSOR_SERVICE);
+
+        light =sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+        temperature=sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
+        accelerometer=sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        Log.i(TAG, "sensor manager start...");
+        
 
         /*String registerName="wifi/location/ID";
         Name deviceName=new Name(registerName);
@@ -495,6 +535,12 @@ public class NDN_service extends Service{
     @Override
     public void onDestroy() {
         super.onDestroy();
+        //release location service
+        mLocationClient.stop();
+        //release sensor service
+        sensorManager.unregisterListener(listener);
+
+//        Looper.loop();
     }
 
     private static ByteBuffer
@@ -1053,11 +1099,13 @@ public class NDN_service extends Service{
             try {
                 Log.i(TAG, "Run NetThread: construct /wsn/ prefix ");
                 Name Request=new Name("/wsn/");
+                Name InInterest=new Name("/wifi/");
                 Name topoRequest=new Name("/wsn/topo");
 
                 Name locationRequest =new Name("/wsn/location");
                 //use /wsn/topo and /wsn/location to initiate on map and  use /wifi to register in remote NFD
                 registerRouteInNFD(Request,registerUri);
+                registerRouteInNFD(InInterest,registerUri);
                 registerRouteInNFD(deviceName,registerUri);
 
                 Log.i(TAG, "register route in NFD success!!");
