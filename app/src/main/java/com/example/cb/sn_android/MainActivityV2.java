@@ -83,12 +83,14 @@ public class MainActivityV2 extends AppCompatActivity
 
 
     HashMap<Integer,WSNLocation> locationBase;
+    HashMap<Integer,WiFiLocation> locationBaseMobile;
     HashMap<Integer,Integer> topoBase;
+    HashMap<Integer,Integer> topoBaseMobile;
 
 
     private int selectedItem=0;
     private InfoWindow mInfoWindow;
-    MarkerOptions nodeSet[]=new MarkerOptions[10];
+    MarkerOptions nodeSet[]=new MarkerOptions[20];
 
 
     @Override
@@ -193,14 +195,14 @@ public class MainActivityV2 extends AppCompatActivity
     }
 
     @Override
-    public void refreshUI(HashMap<Integer, WSNLocation> location, HashMap<Integer, Integer> topo,String type) {
+    public void refreshUI(HashMap<Integer,WSNLocation> location, HashMap<Integer,Integer> topo,HashMap<Integer,WiFiLocation> locationMobile, HashMap<Integer,Integer> topoMobile,String type){
         Log.i(TAG, "refreshUI: ");
         if (type.equals("refreshLocation")){
-            initiateLocation(location);
+            initiateLocation(location,locationMobile);
         }
         else if (type.equals("refreshTopo")){
-            initiateLocation(location);
-            initiateTopo(topo);
+            initiateLocation(location,locationMobile);
+            initiateTopo(topo,topoMobile);
         }
 
     }
@@ -673,13 +675,14 @@ public class MainActivityV2 extends AppCompatActivity
         return super.onOptionsItemSelected(item);
     }
 
-    public void initiateLocation(HashMap<Integer,WSNLocation> Base){
+    public void initiateLocation(HashMap<Integer,WSNLocation> Base,HashMap<Integer,WiFiLocation> BaseMobile){
         Log.i(TAG, "initiateLocation: begining to set node in the map...");
 //        MarkerOptions nodeSet[]=new MarkerOptions[10];
 //        int i=0;
         mapView.getOverlay().clear();
         baiduMap.clear();
         Iterator iterator=Base.entrySet().iterator();
+        Iterator iteratorMobile=BaseMobile.entrySet().iterator();
         while(iterator.hasNext()) {
             Map.Entry entry = (Map.Entry) iterator.next();
             WSNLocation tempWSNLocationEntry =(WSNLocation) entry.getValue();
@@ -698,6 +701,24 @@ public class MainActivityV2 extends AppCompatActivity
             baiduMap.addOverlay(nodeSet[i]);
             baiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(new MapStatus.Builder().zoom(19).build()));
         }
+        while(iteratorMobile.hasNext()) {
+            Map.Entry entry = (Map.Entry) iterator.next();
+            WiFiLocation tempWiFiLocationEntry =(WiFiLocation) entry.getValue();
+            double latitude=tempWiFiLocationEntry.getPoint().latitude;
+            double longitude=tempWiFiLocationEntry.getPoint().longitude;
+            Log.i(TAG, "nodeSet["+entry.getKey()+"] start initiate...");
+            int i=(int)entry.getKey();
+            nodeSet[i] = new MarkerOptions();
+            BitmapDescriptor bitmap = BitmapDescriptorFactory.fromResource(R.drawable.MobilePhone);
+            nodeSet[i].position(new LatLng(latitude,longitude)).icon(bitmap);
+            //set marker option extro info of relative position
+            Bundle tempBundle=new Bundle();
+            double tempD[]={(Double) entry.getKey(), tempWiFiLocationEntry.getPoint().latitude, tempWiFiLocationEntry.getPoint().longitude};
+            tempBundle.putDoubleArray("rl", tempD);
+            nodeSet[i].extraInfo(tempBundle);
+            baiduMap.addOverlay(nodeSet[i]);
+            baiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(new MapStatus.Builder().zoom(19).build()));
+        }
 
 
 //        for(int i=0;i<Base.size();i++){
@@ -710,7 +731,7 @@ public class MainActivityV2 extends AppCompatActivity
 
     }
 
-    public void initiateTopo(HashMap<Integer,Integer> Base){
+    public void initiateTopo(HashMap<Integer,Integer> Base,HashMap<Integer,Integer> BaseMobile){
         //show topo here waiting for finishing later        ...
         Polyline mPolyline;
 
@@ -719,16 +740,27 @@ public class MainActivityV2 extends AppCompatActivity
                 Bundle tempB=nodeSet[i].getExtraInfo();
                 int id[] = tempB.getIntArray("rl");
                 LatLng p1 =nodeSet[i].getPosition();
-                if(Base.get(id[0])==null) {
+                if(Base.get(id[0])==null&&BaseMobile.get(id[0])==null) {
                     continue;
                 }
-                LatLng p2 = nodeSet[Base.get(id[0])].getPosition();
-                List<LatLng> points = new ArrayList<LatLng>();
-                points.add(p1);
-                points.add(p2);
-                OverlayOptions ooPolyline = new PolylineOptions().width(10)
-                        .color(0xAA000000).points(points);
-                mPolyline = (Polyline) baiduMap.addOverlay(ooPolyline);
+                if(Base.get(id[0])!=null) {
+                    LatLng p2 = nodeSet[Base.get(id[0])].getPosition();
+                    List<LatLng> points = new ArrayList<LatLng>();
+                    points.add(p1);
+                    points.add(p2);
+                    OverlayOptions ooPolyline = new PolylineOptions().width(10)
+                            .color(0xAA000000).points(points);
+                    mPolyline = (Polyline) baiduMap.addOverlay(ooPolyline);
+                }
+                if(BaseMobile.get(id[0])!=null){
+                    LatLng p2 = nodeSet[BaseMobile.get(id[0])].getPosition();
+                    List<LatLng> points = new ArrayList<LatLng>();
+                    points.add(p1);
+                    points.add(p2);
+                    OverlayOptions ooPolyline = new PolylineOptions().width(10)
+                            .color(0xAA000000).points(points);
+                    mPolyline = (Polyline) baiduMap.addOverlay(ooPolyline);
+                }
             }
             else continue;
         }
@@ -1102,9 +1134,13 @@ public class MainActivityV2 extends AppCompatActivity
             Log.i(TAG, "get locationBase from NDN service size is "+locationBase.size());
             topoBase = serviceBinder.getTopoBase();
             Log.i(TAG, "get topoBase from NDN service size is "+topoBase.size());
+            locationBaseMobile = serviceBinder.getLocationBaseMobile();
+            Log.i(TAG, "get locationBase from NDN service size is "+locationBaseMobile.size());
+            topoBaseMobile = serviceBinder.getTopoBaseMobile();
+            Log.i(TAG, "get topoBase from NDN service size is "+topoBaseMobile.size());
 
-            initiateLocation(locationBase);
-            initiateTopo(topoBase);
+            initiateLocation(locationBase,locationBaseMobile);
+            initiateTopo(topoBase,topoBaseMobile);
             Log.i(TAG, "update UI success in mian acitivity!");
         }
     };

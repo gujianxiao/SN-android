@@ -125,6 +125,7 @@ public class NDN_service extends Service{
 
 
     HashMap<Integer,Integer> topoBase=new HashMap<>();
+    HashMap<Integer,Integer> topoBaseMobile=new HashMap<>();
     //initiate topo into a hashmap
     public void initiateTopo(String msg){
         Log.i(TAG, "initiateTopo...");
@@ -135,7 +136,19 @@ public class NDN_service extends Service{
             Log.i(TAG, "update topo base "+Integer.parseInt(temp[0])+" to "+topoBase.get(Integer.parseInt(temp[0])));
         }
     }
+    //initiate topo of mobile into topobaseMobile
+    public void initiateTopoMobile(String msg){
+        Log.i(TAG, "initiateTopoMobile...");
+        String topoSet[]=msg.split("\\$+");
+        for(String topo:topoSet){
+            String temp[]=topo.split("->");
+            topoBaseMobile.put(Integer.parseInt(temp[0]),Integer.parseInt(temp[1]));
+            Log.i(TAG, "update topo base mobile "+Integer.parseInt(temp[0])+" to "+topoBaseMobile.get(Integer.parseInt(temp[0])));
+        }
+    }
+
     HashMap<Integer,WSNLocation> locationBase=new HashMap<>();
+    HashMap<Integer,WiFiLocation> locationBaseMobile=new HashMap<>();
     //initiate location into a hashmap
     public void initiateLocation(String msg){
         Log.i(TAG, "initiateLocation...");
@@ -146,6 +159,18 @@ public class NDN_service extends Service{
             WSNLocation tempWSNLocation =new WSNLocation(Integer.parseInt(temp[3]),Integer.parseInt(temp[2]));
             locationBase.put(Integer.parseInt(temp[0]), tempWSNLocation);
             Log.i(TAG, "update location base "+String.valueOf(temp[0])+" to "+locationBase.get(Integer.parseInt(temp[0])).getLatitude()+","+locationBase.get(Integer.parseInt(temp[0])).getLongitude());
+        }
+    }
+    //initiate locationMobile into locationbaseMobile
+    public void initiateLocationMobile(String msg){
+        Log.i(TAG, "initiateLocationMobile...");
+        String locationSet[]=msg.split("\\$+");
+
+        for(String location:locationSet){
+            String temp[]=location.split("->|\\(|\\)|,");
+            WiFiLocation tempWiFiLocation =new WiFiLocation(new LatLng(Double.valueOf(temp[3]),Double.valueOf(temp[4])),temp[5]);
+            locationBaseMobile.put(Integer.parseInt(temp[0]), tempWiFiLocation);
+            Log.i(TAG, "update location base "+String.valueOf(temp[0])+" to "+locationBaseMobile.get(Integer.parseInt(temp[0])).getPoint().latitude+","+locationBaseMobile.get(Integer.parseInt(temp[0])).getPoint().longitude);
         }
     }
 
@@ -170,6 +195,16 @@ public class NDN_service extends Service{
                 }
                 else if (tempName.equals("/wsn/location")){
                     initiateLocation(msg);
+                }
+                else if(tempName.equals("/wifi/topo")){
+                    //initiateTopoMobile;
+                    //maybe bugs
+                    initiateTopoMobile(msg);
+                }
+                else if(tempName.equals("/wifi/location")){
+                    //initiateLocationMobile;
+                    //maybe bugss
+                    initiateLocationMobile(msg);
                 }
                 else {
                     if (data.getContent().toString().equals("success")){
@@ -1021,7 +1056,7 @@ public class NDN_service extends Service{
             else{
                 Log.i(TAG, "register device in gateway failed, fail to create filter of this device try later...");
             }
-            if (locationBase.size()>0&&topoBase.size()>0){
+            if (locationBase.size()>0&&topoBase.size()>0&&locationBaseMobile.size()>0&&topoBaseMobile.size()>0){
                 return true;
             }
             else{
@@ -1043,6 +1078,14 @@ public class NDN_service extends Service{
             return topoBase;
         }
 
+        public HashMap<Integer,WiFiLocation> getLocationBaseMobile(){
+            return locationBaseMobile;
+        }
+
+
+        public HashMap<Integer,Integer> getTopoBaseMobile(){
+            return topoBaseMobile;
+        }
 
 
 
@@ -1100,10 +1143,12 @@ public class NDN_service extends Service{
                 Log.i(TAG, "Run NetThread: construct /wsn/ prefix ");
                 Name Request=new Name("/wsn/");
                 Name InInterest=new Name("/wifi/");
-                Name topoRequest=new Name("/wsn/topo");
+                Name WSNtopoRequest=new Name("/wsn/topo");
+                Name WiFitopoRequest=new Name("/wifi/topo");
+                Name WiFilocationRequest=new Name("/wifi/location");
 
-                Name locationRequest =new Name("/wsn/location");
-                //use /wsn/topo and /wsn/location to initiate on map and  use /wifi to register in remote NFD
+                Name WSNlocationRequest =new Name("/wsn/location");
+                //use /wsn/topo /wifi/topo /wifi/location and /wsn/location to initiate on map and  use /wifi to register in remote NFD
                 registerRouteInNFD(Request,registerUri);
                 registerRouteInNFD(InInterest,registerUri);
                 registerRouteInNFD(deviceName,registerUri);
@@ -1112,10 +1157,18 @@ public class NDN_service extends Service{
 
                 Log.i(TAG, "try to express Interest");
                 try {
-                    face.expressInterest(locationRequest, incomD, incomD);
-                    Log.i(TAG, "Express name " + locationRequest.toUri());
-                    face.expressInterest(topoRequest, incomD, incomD);
-                    Log.i(TAG, "Express name " + topoRequest.toUri());
+                    face.expressInterest(WSNlocationRequest, incomD, incomD);
+                    Log.i(TAG, "Express name " + WSNlocationRequest.toUri());
+
+                    face.expressInterest(WSNtopoRequest, incomD, incomD);
+                    Log.i(TAG, "Express name " + WSNtopoRequest.toUri());
+
+                    face.expressInterest(WiFitopoRequest, incomD, incomD);
+                    Log.i(TAG, "Express name " + WiFitopoRequest.toUri());
+
+                    face.expressInterest(WiFilocationRequest, incomD, incomD);
+                    Log.i(TAG, "Express name " + WiFilocationRequest.toUri());
+
                     face.expressInterest(deviceName, incomD, incomD);
                     Log.i(TAG, "Express name " + deviceName.toUri());
 

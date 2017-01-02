@@ -6,10 +6,17 @@ import com.baidu.mapapi.model.LatLng;
  * Created by cb on 16-11-11.
  */
 public class WiFiLocation {
+    private LatLng point;
     private LatLng leftDown;
     private LatLng rightUp;
     private String dataType;
     private String deviceName;
+
+
+    public WiFiLocation(LatLng point, String deviceName) {
+        this.point = point;
+        this.deviceName = deviceName;
+    }
 
     public WiFiLocation(LatLng leftDown, LatLng rightUp, String deviceName) {
         this.leftDown = leftDown;
@@ -56,5 +63,14 @@ public class WiFiLocation {
 
     public void setDataType(String dataType) {
         this.dataType = dataType;
+    }
+
+
+    public LatLng getPoint() {
+        return point;
+    }
+
+    public void setPoint(LatLng point) {
+        this.point = point;
     }
 }
