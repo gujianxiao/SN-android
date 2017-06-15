@@ -17,7 +17,7 @@
         <item
             android:id="@+id/nav_getPoint"
             android:icon="@drawable/help"
-            android:title="Get Point" />
+            android:title="Get Area" />
     </group>
 
     <item android:title="Others">

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">SN-android</string>
+    <string name="app_name">GlobeSen-Android</string>
     <string name="title_activity_login">Sign in</string>
 
     <!-- Strings related to login -->
@@ -14,7 +14,7 @@
     <string name="permission_rationale">"Contacts permissions are needed for providing email
         completions."
     </string>
-    <string name="title_activity_main_activity_v2">SN-android</string>
+    <string name="title_activity_main_activity_v2">GlobeSen-Android</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>

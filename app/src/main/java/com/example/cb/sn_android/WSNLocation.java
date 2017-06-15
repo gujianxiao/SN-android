@@ -1,5 +1,7 @@
 package com.example.cb.sn_android;
 
+import com.baidu.mapapi.model.LatLng;
+
 /**
  * Created by cb on 16-10-28.
  */
@@ -13,8 +15,32 @@ public class WSNLocation {
         private int leftDownLng;
         private int rightUpLat;
         private int rightUpLng;
+        private LatLng leftDown;
+        private LatLng rightUp;
 
-    public WSNLocation(int rightUpLat, int leftDownLat, int leftDownLng, int rightUpLng) {
+    public WSNLocation(LatLng leftDown, LatLng rightUp, String dataType) {
+        this.leftDown = leftDown;
+        this.rightUp = rightUp;
+        this.dataType = dataType;
+    }
+
+    public LatLng getLeftDown() {
+        return leftDown;
+    }
+
+    public void setLeftDown(LatLng leftDown) {
+        this.leftDown = leftDown;
+    }
+
+    public LatLng getRightUp() {
+        return rightUp;
+    }
+
+    public void setRightUp(LatLng rightUp) {
+        this.rightUp = rightUp;
+    }
+
+    public WSNLocation(int leftDownLat, int leftDownLng, int rightUpLat, int rightUpLng) {
         this.rightUpLat = rightUpLat;
         this.leftDownLat = leftDownLat;
         this.leftDownLng = leftDownLng;

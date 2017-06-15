@@ -52,8 +52,8 @@ public class RefreshTask extends AsyncTask<String,Integer,Boolean>{
         Log.i(TAG, "doInBackground: start to refresh "+params[0]);
         type=params[0];
         if (params[0].equals("refreshLocation")){
-            Name locationRequest =new Name("/wsn/location");
-            Name locationRequestMobile=new Name("/wifi/location");
+            Name locationRequest =new Name("/NDN-IOT/wsn/location");
+            Name locationRequestMobile=new Name("/NDN-IOT/wifi/location");
             try {
                 face.expressInterest(locationRequest, incomD, incomD);
                 Log.i(TAG, "Express name " + locationRequest.toUri());
@@ -83,10 +83,10 @@ public class RefreshTask extends AsyncTask<String,Integer,Boolean>{
 
         }
         else if(params[0].equals("refreshTopo")){
-            Name locationRequest =new Name("/wsn/location");
-            Name topoRequest=new Name("/wsn/topo");
-            Name locationRequestMobile =new Name("/wifi/location");
-            Name topoRequestMobile=new Name("/wifi/topo");
+            Name locationRequest =new Name("/NDN-IOT/wsn/location");
+            Name topoRequest=new Name("/NDN-IOT/wsn/topo");
+            Name locationRequestMobile =new Name("/NDN-IOT/wifi/location");
+            Name topoRequestMobile=new Name("/NDN-IOT/wifi/topo");
             try {
                 face.expressInterest(locationRequest, incomD, incomD);
                 Log.i(TAG, "Express name " + locationRequest.toUri());
@@ -157,18 +157,18 @@ public class RefreshTask extends AsyncTask<String,Integer,Boolean>{
                 Log.i(TAG, "Data is null");
             } else if (msg.length()>0) {
                     String tempName= data.getName().toString();
-                    if (tempName.equals("/wsn/topo")) {
+                    if (tempName.equals("/NDN-IOT/wsn/topo")) {
                         initiateTopo(msg);
                     }
-                    else if (tempName.equals("/wsn/location")){
+                    else if (tempName.equals("/NDN-IOT/wsn/location")){
                         initiateLocation(msg);
                     }
-                    else if(tempName.equals("/wifi/topo")){
+                    else if(tempName.equals("/NDN-IOT/wifi/topo")){
                         //initiateTopoMobile;
                         //maybe bugs
                         initiateTopoMobile(msg);
                     }
-                    else if(tempName.equals("/wifi/location")){
+                    else if(tempName.equals("/NDN-IOT/wifi/location")){
                         //initiateLocationMobile;
                         //maybe bugss
                         initiateLocationMobile(msg);
@@ -226,7 +226,7 @@ public class RefreshTask extends AsyncTask<String,Integer,Boolean>{
             String temp[]=location.split("->|\\(|\\)|,");
             WiFiLocation tempWiFiLocation =new WiFiLocation(new LatLng(Double.valueOf(temp[3]),Double.valueOf(temp[4])),temp[5]);
             locationBaseMobile.put(Integer.parseInt(temp[0]), tempWiFiLocation);
-            Log.i(TAG, "update location base "+String.valueOf(temp[0])+" to "+locationBaseMobile.get(Integer.parseInt(temp[0])).getPoint().latitude+","+locationBaseMobile.get(Integer.parseInt(temp[0])).getPoint().longitude);
+            Log.i(TAG, "update location base mobile "+String.valueOf(temp[0])+" to "+locationBaseMobile.get(Integer.parseInt(temp[0])).getPoint().latitude+","+locationBaseMobile.get(Integer.parseInt(temp[0])).getPoint().longitude);
         }
     }
     

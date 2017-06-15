@@ -27,7 +27,7 @@ public class SendWiFiInterestTask extends AsyncTask <HashMap<Integer,WiFiLocatio
     private int callbackCount=0;
     private int dataCount=0;
     interface Callback{
-        public void updateUI(HashMap<Integer,Data> updataBase);
+        public void updateUIMobile(HashMap<Integer,Data> updataBase);
     }
     public SendWiFiInterestTask(){}
     public SendWiFiInterestTask(Callback callback){
@@ -47,7 +47,7 @@ public class SendWiFiInterestTask extends AsyncTask <HashMap<Integer,WiFiLocatio
                     nodeWiFiLocation = (WiFiLocation) entry.getValue();
                     long currentTimeStart=System.currentTimeMillis()-5;
                     long currentTimeEnd=currentTimeStart+15;
-                    Name interestOfNode = new Name("/wifi/" + nodeWiFiLocation.getLeftDown().latitude +","+nodeWiFiLocation.getLeftDown().longitude+"/"+nodeWiFiLocation.getRightUp().latitude+","+nodeWiFiLocation.getRightUp().longitude+"/"+currentTimeStart+"/"+currentTimeEnd+nodeWiFiLocation.getDataType());
+                    Name interestOfNode = new Name("/NDN-IOT/"+nodeWiFiLocation.getLeftDown().longitude +"/"+ nodeWiFiLocation.getLeftDown().latitude +"/"+nodeWiFiLocation.getRightUp().longitude+"/"+nodeWiFiLocation.getRightUp().latitude+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWiFiLocation.getDataType()+"/wifi");
                     incomingData incomD = new incomingData();
                     face.expressInterest(interestOfNode, incomD, incomD);
                 }
@@ -79,7 +79,7 @@ public class SendWiFiInterestTask extends AsyncTask <HashMap<Integer,WiFiLocatio
             nodeWiFiLocation =(WiFiLocation)entry.getValue();
             long currentTimeStart=System.currentTimeMillis()-5;
             long currentTimeEnd=currentTimeStart+15;
-            Name interestOfNode=new Name("/wifi/"+ nodeWiFiLocation.getLeftDown().latitude+ ","+nodeWiFiLocation.getLeftDown().longitude+"/"+ nodeWiFiLocation.getRightUp().latitude+","+ nodeWiFiLocation.getRightUp().longitude+"/"+currentTimeStart+"/"+currentTimeEnd+nodeWiFiLocation.getDataType() );
+            Name interestOfNode=new Name("/NDN-IOT/"+nodeWiFiLocation.getLeftDown().longitude +"/"+ nodeWiFiLocation.getLeftDown().latitude +"/"+nodeWiFiLocation.getRightUp().longitude+"/"+nodeWiFiLocation.getRightUp().latitude+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWiFiLocation.getDataType()+"/wifi");
             Log.i(TAG, "send interest "+interestOfNode.toString());
             incomingData incomD=new incomingData();
             try {
@@ -113,7 +113,7 @@ public class SendWiFiInterestTask extends AsyncTask <HashMap<Integer,WiFiLocatio
             nodeWiFiLocation =(WiFiLocation)entry.getValue();
             long currentTimeStart=System.currentTimeMillis()-5;
             long currentTimeEnd=currentTimeStart+15;
-            Name interestOfNode=new Name("/wifi/"+ nodeWiFiLocation.getLeftDown().latitude+ ","+nodeWiFiLocation.getLeftDown().longitude+"/"+ nodeWiFiLocation.getRightUp().latitude+","+ nodeWiFiLocation.getRightUp().longitude+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWiFiLocation.getDataType() );
+            Name interestOfNode=new Name("/NDN-IOT/"+nodeWiFiLocation.getLeftDown().longitude +"/"+ nodeWiFiLocation.getLeftDown().latitude +"/"+nodeWiFiLocation.getRightUp().longitude+"/"+nodeWiFiLocation.getRightUp().latitude+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWiFiLocation.getDataType()+"/wifi");
             Log.i(TAG, "send interest "+interestOfNode.toString());
             incomingData incomD=new incomingData();
             try {
@@ -154,7 +154,10 @@ public class SendWiFiInterestTask extends AsyncTask <HashMap<Integer,WiFiLocatio
     protected void onPostExecute(Boolean o) {
         Log.i(TAG, "onPostExecute: execute async task of send interest success!");
         if(this.callback!=null){
-            this.callback.updateUI(comeBackData);
+//            Name mobileMaketName=new Name("mobile");
+//            Data mobileMaketData=new Data(mobileMaketName);
+//            comeBackData.put(1000,mobileMaketData);
+            this.callback.updateUIMobile(comeBackData);
         }
         //   Toast.makeText(MainActivityV2.,"Send Interest task success!",Toast.LENGTH_LONG).show();
         super.onPostExecute(o);

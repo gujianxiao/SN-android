@@ -7,12 +7,15 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.StrictMode;
 import android.support.annotation.Nullable;
+import android.telecom.GatewayInfo;
 import android.util.Log;
 
 import com.baidu.location.BDLocation;
@@ -59,7 +62,9 @@ import net.named_data.jndn.util.SegmentFetcher;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by cb on 16-9-26.NDN_Servie class provide NDN service for SN-android.
@@ -70,6 +75,8 @@ public class NDN_service extends Service{
     private Face face;
     String registerUri;
     Name deviceName;
+    WiFiLocation gatewayArea;
+    String gatewayAreaString;
     incomingData incomD = new incomingData();
     public int callbackCount= 0;
     private  int registerSignal=1;
@@ -168,7 +175,8 @@ public class NDN_service extends Service{
 
         for(String location:locationSet){
             String temp[]=location.split("->|\\(|\\)|,");
-            WiFiLocation tempWiFiLocation =new WiFiLocation(new LatLng(Double.valueOf(temp[3]),Double.valueOf(temp[4])),temp[5]);
+            //waiting for modifying to dealing lat lng and node ID problem...
+            WiFiLocation tempWiFiLocation =new WiFiLocation(new LatLng(Double.valueOf(temp[3]),Double.valueOf(temp[2])),temp[0]);
             locationBaseMobile.put(Integer.parseInt(temp[0]), tempWiFiLocation);
             Log.i(TAG, "update location base "+String.valueOf(temp[0])+" to "+locationBaseMobile.get(Integer.parseInt(temp[0])).getPoint().latitude+","+locationBaseMobile.get(Integer.parseInt(temp[0])).getPoint().longitude);
         }
@@ -190,25 +198,30 @@ public class NDN_service extends Service{
             if(msg!=null){
                 Log.i(TAG, "onData: "+msg);
                 String tempName= data.getName().toString();
-                if (tempName.equals("/wsn/topo")) {
+                if (tempName.contains("/wsn/topo")) {
                     initiateTopo(msg);
                 }
-                else if (tempName.equals("/wsn/location")){
+                else if (tempName.contains("/wsn/location")){
                     initiateLocation(msg);
                 }
-                else if(tempName.equals("/wifi/topo")){
+                else if(tempName.contains("/wifi/topo")){
                     //initiateTopoMobile;
                     //maybe bugs
                     initiateTopoMobile(msg);
                 }
-                else if(tempName.equals("/wifi/location")){
+                else if(tempName.contains("/wifi/location")){
                     //initiateLocationMobile;
                     //maybe bugss
                     initiateLocationMobile(msg);
                 }
                 else {
-                    if (data.getContent().toString().equals("success")){
+                    if (tempName.contains("NDN-IOT-REGISTER")){
                         registerSignal=0;
+                        String tempArea[]=data.getContent().toString().split("/");
+                        LatLng tpLeftDown=new LatLng(Double.valueOf(tempArea[2]),Double.valueOf(tempArea[1]));
+                        LatLng tpRightUp=new LatLng(Double.valueOf(tempArea[4]),Double.valueOf(tempArea[3]));
+                        gatewayArea=new WiFiLocation(tpLeftDown,tpRightUp,"Gateway");
+                        gatewayAreaString=new String(tempArea[1]+"/"+tempArea[2]+"/"+tempArea[3]+"/"+tempArea[4]);
                     }
                     Log.i(TAG, "this Data is not topo or location");
                 }
@@ -370,65 +383,100 @@ public class NDN_service extends Service{
                 return;
             }
             else {
-                String tpLeftDown[]=temp[2].split("%2C");
-                String tpRightUp[]=temp[3].split("%2C");
-                if (!(Double.valueOf(tpLeftDown[0])<=BaiduLocation.getLatitude()&&Double.valueOf(tpLeftDown[1])<=BaiduLocation.getLongitude()
-                    &&Double.valueOf(tpRightUp[0])>=BaiduLocation.getLatitude()&&Double.valueOf(tpRightUp[1])>=BaiduLocation.getLongitude()
-                        ))
+                Log.i(TAG, "onInterest: BaiduLocation not null, start to match...");
+//                String tpLeftDown[]= {temp[2],temp[3]};
+//                String tpRightUp[]={temp[4],temp[5]};
+//                if (!(Double.valueOf(temp[2])<=BaiduLocation.getLongitude()&&Double.valueOf(temp[3])<=BaiduLocation.getLatitude()
+//                    &&Double.valueOf(temp[4])>=BaiduLocation.getLongitude()&&Double.valueOf(temp[5])>=BaiduLocation.getLatitude()
+//                        ))
+                //modify if you want to set fixed point for experiments
+                if (!(Double.valueOf(temp[2])<=116.363055&&Double.valueOf(temp[3])<=39.966977
+                            &&Double.valueOf(temp[4])>=116.363055&&Double.valueOf(temp[5])>=39.966977
+                ))
                 {
+                    Log.i(TAG, "onInterest: not matching in mobile's location, discard interest.");
                     return;
                 }
             }
 
 
             try {
+                String TAG="WiFiManagement";
+                WifiManager wifiManager;
+                List<ScanResult> list;
 
 
+                    wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+//                    openWifi();
+                    list = wifiManager.getScanResults();
+//        ListView listView = (ListView) findViewById(R.id.listView);
+                    if (list == null) {
+                        Log.i(TAG, "WiFi: wifi closed");
+//            Toast.makeText(this, "wifi未打开！", Toast.LENGTH_LONG).show();
+                    }else {
+                        Log.i(TAG, "WiFi: multiple connection covering！ 共"+list.size()+"个。");
+                        Log.i(TAG, "Available Name of WiFi gateway:");
+                        Iterator iterator=list.iterator();
+                        while (iterator.hasNext()){
+                            Map.Entry entry = (Map.Entry) iterator.next();
+                            Log.i(TAG, entry.getKey().toString()+entry.getValue().toString());
+                        }
+//            Toast.makeText(this, "多wifi覆盖！ 共"+list.size()+"个。", Toast.LENGTH_LONG).show();
+//            listView.setAdapter(new MyAdapter(this,list));
+                    }
+
+
+
+
+
+
+
+                Log.i(TAG, "onInterest: start to construct the Data packet...");
                 long currentTimeStart=System.currentTimeMillis()/1000;
                 long currentTimeEnd=currentTimeStart+10;
 
                 Name tempName=interest.getName();
 //                String temp[]=interest.getName().toString().split("/");
                 MetaInfo metaInfo=new MetaInfo();
-                metaInfo.setFreshnessPeriod(10000);
-                if (temp[temp.length-1].equals("temp")){
+                metaInfo.setFreshnessPeriod(1000);
+                if (temp[temp.length-2].equals("temp")){
                     sensorType="temp";
                     sensorManager.registerListener(listener,temperature,SensorManager.SENSOR_DELAY_UI);
                     Data backData=new Data(tempName);
 //                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+currentTimeStart+currentTimeEnd+"/temp/"+sensorValue);
-                    Blob blob=new Blob("/"+BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+","+currentTimeEnd+"/temp/"+sensorValueOfTemp);
+                    Blob blob=new Blob("/"+BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+"/"+currentTimeEnd+"/temp/"+sensorValueOfTemp+list.toString());
                     backData.setContent(blob);
                     backData.setMetaInfo(metaInfo);
                     face.putData(backData);
                     Log.i(TAG, "send Data:"+backData.getContent()+" of Interest"+interest.getName()+" success!");
 
                 }
-                else if (temp[temp.length-1].equals("light")){
+                else if (temp[temp.length-2].equals("light")){
                     sensorType="light";
                     sensorManager.registerListener(listener,light,SensorManager.SENSOR_DELAY_UI);
                     Data backData=new Data(tempName);
 //                    Blob blob=new Blob("/"+deviceLatLng.latitude+"," +deviceLatLng.longitude+currentTimeStart+currentTimeEnd+"/light/"+sensorValue);
-                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+","+currentTimeEnd+"/light/"+sensorValueOfLight);
+                    Blob blob=new Blob("/"+BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+"/"+currentTimeEnd+"/light/"+sensorValueOfLight);
                     backData.setContent(blob);
                     backData.setMetaInfo(metaInfo);
                     face.putData(backData);
                     Log.i(TAG, "send Data:"+backData.getContent()+" of Interest"+interest.getName()+" success!");
                 }
-                else if (temp[temp.length-1].equals("acceler")){
+                else if (temp[temp.length-2].equals("acceler")){
                     sensorType="acceler";
                     sensorManager.registerListener(listener,accelerometer,SensorManager.SENSOR_DELAY_UI);
                     Data backData=new Data(tempName);
 //                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+currentTimeStart+currentTimeEnd+"/acceler/"+sensorValue);
-                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+","+currentTimeEnd+"/acceler/"+sensorValueOfAcceler);
+                    Blob blob=new Blob("/"+BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+"/"+currentTimeEnd+"/acceler/"+sensorValueOfAcceler);
                     backData.setContent(blob);
                     backData.setMetaInfo(metaInfo);
                     face.putData(backData);
                     Log.i(TAG, "send Data:"+backData.getContent()+" of Interest"+interest.getName()+" success!");
                 }
-                else if (temp[temp.length-1].equals("location")){
+                else if (temp[temp.length-2].equals("location")){
                     Data backData=new Data(tempName);
 //                    Blob blob=new Blob(deviceLatLng.latitude+"," +deviceLatLng.longitude+currentTimeStart+currentTimeEnd+"/acceler/"+sensorValue);
-                    Blob blob=new Blob(BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+","+currentTimeEnd+"/"+sensorValueOfAcceler);
+                    Blob blob=new Blob("/"+BaiduLocation.getLatitude()+"," +BaiduLocation.getLongitude()+"/"+currentTimeStart+"/"+currentTimeEnd+"/location");
                     backData.setContent(blob);
                     backData.setMetaInfo(metaInfo);
                     face.putData(backData);
@@ -1000,16 +1048,14 @@ public class NDN_service extends Service{
             Log.i(TAG, "get latlng argument: "+deviceLatLng.toString());
             Log.i(TAG, "get serverAddress argument: "+HOST);
 
-
-
             //Face faceListen=new Face("gatewayIP");
-            incomingInterest incomI= new incomingInterest();
+
             //onregisterfailed regfailed=new onregisterfailed();
 
             double lat=deviceLatLng.latitude;
             double lng=deviceLatLng.longitude;
             //set filter of this device
-            deviceName=new Name("/wifi/register/"+userID);
+            deviceName=new Name("/NDN-IOT-REGISTER/wifi/"+userID+"/"+lng+"/"+lat);
 //            Name incomInName=new Name(deviceName);
             Log.i(TAG, "name initiate");
 
@@ -1026,41 +1072,14 @@ public class NDN_service extends Service{
 
 
             //register device success
-            if(registerSignal==0){
 
-                try{
-                    Log.i(TAG, "setInterestFilter initiate...");
-                    Name sensorInterest=new Name("/wifi/");
-                    face.registerPrefix(sensorInterest,incomI,new OnRegisterFailed() {
-                        public void onRegisterFailed(Name prefix) {
-                            Log.i(TAG, "onRegisterFailed: Failed to register the external forwarder: " + prefix.toUri());
-                            System.exit(1);
-                        }
-                    });
-                    Log.i(TAG, "initiate setInterestFilter really success!");
-//                    KeyChain keyChain=new KeyChain();
-//                    Log.i(TAG, "keyChain initiate success");
-//                    face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());
-//                    Log.i(TAG, "sign info initiate success");
-//                    face.registerPrefix(incomInName,incomI,regfailed);
-                    new faceProcessEvent().execute();
-                }
-                catch (Exception e){
-                    e.printStackTrace();
-                    Log.e(TAG, "register prefix failed in device NFD "+e.getMessage());
-                }
-
-                //face.setInterestFilter(new Name("/wifi/location/"),incomI);
-
-            }
-            else{
-                Log.i(TAG, "register device in gateway failed, fail to create filter of this device try later...");
-            }
             if (locationBase.size()>0&&topoBase.size()>0&&locationBaseMobile.size()>0&&topoBaseMobile.size()>0){
                 return true;
             }
             else{
                 Log.i(TAG, "startBind not finish topo and location initiate.");
+                Log.i(TAG, "startBind: locationBase size:"+locationBase.size()+", topoBase size:"+topoBase.size()+", locationMobile size:"+locationBaseMobile.size()+"topoBaseMobile size:"+
+                        topoBaseMobile.size());
                 return false;
             }
 
@@ -1080,6 +1099,10 @@ public class NDN_service extends Service{
 
         public HashMap<Integer,WiFiLocation> getLocationBaseMobile(){
             return locationBaseMobile;
+        }
+
+        public WiFiLocation getGatewayArea(){
+            return gatewayArea;
         }
 
 
@@ -1140,14 +1163,10 @@ public class NDN_service extends Service{
         public void run() {
 
             try {
-                Log.i(TAG, "Run NetThread: construct /wsn/ prefix ");
-                Name Request=new Name("/wsn/");
+                Log.i(TAG, "Run NetThread: construct /NDN-IOT/ prefix ");
+                Name Request=new Name("/NDN-IOT/");
                 Name InInterest=new Name("/wifi/");
-                Name WSNtopoRequest=new Name("/wsn/topo");
-                Name WiFitopoRequest=new Name("/wifi/topo");
-                Name WiFilocationRequest=new Name("/wifi/location");
 
-                Name WSNlocationRequest =new Name("/wsn/location");
                 //use /wsn/topo /wifi/topo /wifi/location and /wsn/location to initiate on map and  use /wifi to register in remote NFD
                 registerRouteInNFD(Request,registerUri);
                 registerRouteInNFD(InInterest,registerUri);
@@ -1157,22 +1176,9 @@ public class NDN_service extends Service{
 
                 Log.i(TAG, "try to express Interest");
                 try {
-                    face.expressInterest(WSNlocationRequest, incomD, incomD);
-                    Log.i(TAG, "Express name " + WSNlocationRequest.toUri());
-
-                    face.expressInterest(WSNtopoRequest, incomD, incomD);
-                    Log.i(TAG, "Express name " + WSNtopoRequest.toUri());
-
-                    face.expressInterest(WiFitopoRequest, incomD, incomD);
-                    Log.i(TAG, "Express name " + WiFitopoRequest.toUri());
-
-                    face.expressInterest(WiFilocationRequest, incomD, incomD);
-                    Log.i(TAG, "Express name " + WiFilocationRequest.toUri());
-
                     face.expressInterest(deviceName, incomD, incomD);
                     Log.i(TAG, "Express name " + deviceName.toUri());
-
-                    while (callbackCount< 3) {
+                    while (callbackCount< 1) {
 
                         face.processEvents();
 
@@ -1184,6 +1190,75 @@ public class NDN_service extends Service{
                         Thread.sleep(10);
 
                     }
+
+//                    while(gatewayArea==null){
+//                        Log.i(TAG, "run: do not receive gatewayArea...");
+//                        Thread.sleep(10);
+//                    }
+                    Log.i(TAG, "run: gateway information is :"+gatewayArea.toString());
+                    Name WSNtopoRequest=new Name("/NDN-IOT/"+gatewayAreaString+"/wsn/topo");
+                    Name WiFitopoRequest=new Name("/NDN-IOT/"+gatewayAreaString+"/wifi/topo");
+                    Name WiFilocationRequest=new Name("/NDN-IOT/"+gatewayAreaString+"/wifi/location");
+
+                    Name WSNlocationRequest =new Name("/NDN-IOT/"+gatewayAreaString+"/wsn/location");
+
+
+                    face.expressInterest(WSNlocationRequest, incomD, incomD);
+                    Log.i(TAG, "Express name " + WSNlocationRequest.toUri());
+
+                    face.expressInterest(WSNtopoRequest, incomD, incomD);
+                    Log.i(TAG, "Express name " + WSNtopoRequest.toUri());
+
+                    face.expressInterest(WiFilocationRequest, incomD, incomD);
+                    Log.i(TAG, "Express name " + WiFilocationRequest.toUri());
+
+                    face.expressInterest(WiFitopoRequest, incomD, incomD);
+                    Log.i(TAG, "Express name " + WiFitopoRequest.toUri());
+                    while (callbackCount< 4) {
+
+                        face.processEvents();
+
+                        // We need to sleep for a few milliseconds so we don't use
+                        // 100% of
+
+                        // the CPU.
+
+                        Thread.sleep(10);
+
+                    }
+
+                    if(registerSignal==0){
+                        incomingInterest incomI= new incomingInterest();
+
+                        try{
+                            Log.i(TAG, "setInterestFilter initiate...");
+                            Name sensorInterest=new Name("/NDN-IOT/");
+                            face.registerPrefix(sensorInterest,incomI,new OnRegisterFailed() {
+                                public void onRegisterFailed(Name prefix) {
+                                    Log.i(TAG, "onRegisterFailed: Failed to register the external forwarder: " + prefix.toUri());
+                                    System.exit(1);
+                                }
+                            });
+                            Log.i(TAG, "initiate setInterestFilter really success!");
+//                    KeyChain keyChain=new KeyChain();
+//                    Log.i(TAG, "keyChain initiate success");
+//                    face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());
+//                    Log.i(TAG, "sign info initiate success");
+//                    face.registerPrefix(incomInName,incomI,regfailed);
+                            new faceProcessEvent().execute();
+                        }
+                        catch (Exception e){
+                            e.printStackTrace();
+                            Log.e(TAG, "register prefix failed in device NFD "+e.getMessage());
+                        }
+
+                        //face.setInterestFilter(new Name("/wifi/location/"),incomI);
+
+                    }
+                    else{
+                        Log.i(TAG, "register device in gateway failed, fail to create filter of this device try later...");
+                    }
+
 
 
                 } catch (IOException e) {

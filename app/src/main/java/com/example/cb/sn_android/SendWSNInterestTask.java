@@ -48,7 +48,8 @@ public class SendWSNInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>
                 nodeWSNLocation = (WSNLocation) entry.getValue();
                 long currentTimeStart=System.currentTimeMillis()/1000;
                 long currentTimeEnd=currentTimeStart+10;
-                Name interestOfNode = new Name("/wsn/" + nodeWSNLocation.getLongitude() +","+nodeWSNLocation.getLatitude() +"/"+nodeWSNLocation.getLongitude() +","+nodeWSNLocation.getLatitude()+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWSNLocation.getDataType());
+                Name interestOfNode = new Name("/NDN-IOT/" + nodeWSNLocation.getLongitude() +"/"+nodeWSNLocation.getLatitude() +"/"+nodeWSNLocation.getLongitude() +"/"+nodeWSNLocation.getLatitude()+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWSNLocation.getDataType()+"/wsn");
+//                Name interestOfNode = new Name("/NDN-IOT/"+nodeWSNLocation.getLeftDown().longitude+"/"nodeWSNLocation.getLeftDown().latitude+"/"+nodeWSNLocation.getRightUp().longitude+"/"+nodeWSNLocation.getLeftDown().latitude+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWSNLocation.getDataType()+"/wsn");
                 incomingData incomD = new incomingData();
                 face.expressInterest(interestOfNode, incomD, incomD);
             }
@@ -80,7 +81,8 @@ public class SendWSNInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>
             nodeWSNLocation =(WSNLocation)entry.getValue();
             long currentTimeStart=System.currentTimeMillis()/1000;
             long currentTimeEnd=currentTimeStart+10;
-            Name interestOfNode=new Name("/wsn/"+ nodeWSNLocation.getLeftDownLng()+ ","+nodeWSNLocation.getLeftDownLat()+"/"+ nodeWSNLocation.getRightUpLng()+","+ nodeWSNLocation.getRightUpLat()+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWSNLocation.getDataType() );
+//            Name interestOfNode=new Name("/NDN-IOT/"+ nodeWSNLocation.getLeftDownLng()+ "/"+nodeWSNLocation.getLeftDownLat()+"/"+ nodeWSNLocation.getRightUpLng()+"/"+ nodeWSNLocation.getRightUpLat()+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWSNLocation.getDataType()+"/wsn");
+            Name interestOfNode = new Name("/NDN-IOT/"+nodeWSNLocation.getLeftDown().longitude+"/"+nodeWSNLocation.getLeftDown().latitude+"/"+nodeWSNLocation.getRightUp().longitude+"/"+nodeWSNLocation.getRightUp().latitude+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWSNLocation.getDataType()+"/wsn");
             Log.i(TAG, "send interest "+interestOfNode.toString());
             incomingData incomD=new incomingData();
             try {
@@ -114,7 +116,7 @@ public class SendWSNInterestTask extends AsyncTask <HashMap<Integer,WSNLocation>
             nodeWSNLocation =(WSNLocation)entry.getValue();
             long currentTimeStart=System.currentTimeMillis()/1000;
             long currentTimeEnd=currentTimeStart+10;
-            Name interestOfNode=new Name("/wsn/"+ nodeWSNLocation.getLongitude()+ ","+nodeWSNLocation.getLatitude()+"/"+ nodeWSNLocation.getLongitude()+","+ nodeWSNLocation.getLatitude()+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWSNLocation.getDataType() );
+            Name interestOfNode=new Name("/NDN-IOT/"+ nodeWSNLocation.getLongitude()+ "/"+nodeWSNLocation.getLatitude()+"/"+ nodeWSNLocation.getLongitude()+"/"+ nodeWSNLocation.getLatitude()+"/"+currentTimeStart+"/"+currentTimeEnd+"/"+nodeWSNLocation.getDataType()+"/wsn");
             Log.i(TAG, "send interest "+interestOfNode.toString());
             incomingData incomD=new incomingData();
             try {

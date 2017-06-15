@@ -59,7 +59,7 @@ import java.util.List;
 import java.util.Map;
 
 public class MainActivityV2 extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener,SendWSNInterestTask.Callback ,RefreshTask.Callback{
+        implements NavigationView.OnNavigationItemSelectedListener,SendWSNInterestTask.Callback, SendWiFiInterestTask.Callback, RefreshTask.Callback{
 
 
     private final String TAG="sn-android main";
@@ -86,11 +86,12 @@ public class MainActivityV2 extends AppCompatActivity
     HashMap<Integer,WiFiLocation> locationBaseMobile;
     HashMap<Integer,Integer> topoBase;
     HashMap<Integer,Integer> topoBaseMobile;
+    WiFiLocation gatewayArea;
 
 
     private int selectedItem=0;
     private InfoWindow mInfoWindow;
-    MarkerOptions nodeSet[]=new MarkerOptions[20];
+    MarkerOptions nodeSet[]=new MarkerOptions[50];
 
 
     @Override
@@ -134,16 +135,47 @@ public class MainActivityV2 extends AppCompatActivity
         }
 
 
-        else if (data.size()>1){
-            String info[]=new String[data.size()];
-            AlertDialog.Builder infoDialog= new AlertDialog.Builder(MainActivityV2.this);
-            infoDialog.setTitle("Sensory Data of Every Node");
-            for(int i=0;i<data.size();i++){
-                Data tpdata=data.get(i);
-                Log.i(TAG, tpdata.getContent().toString());
-                String tempData[] = tpdata.getContent().toString().split("\\$+");
+        else if (data.size()>1) {
+//            Data tpData = data.get(1000);
+//            if (tpData.getName().equals("mobile")) {
+//                //get mobile area Data
+//                Log.i(TAG, data.get(0).getContent().toString());
+//                String tempData[] = data.get(0).getContent().toString().split("\\$+");
+//                String tp1[] = tempData[0].split("/");
+//
+//                Button button = new Button(getApplicationContext());
+//                button.setBackgroundResource(R.drawable.mobilephone);
+//                InfoWindow.OnInfoWindowClickListener listener = null;
+//                button.setText(tp1[3] + ": " + tp1[4]);
+//
+//
+////            button.setTextColor(0x0F0F0F);
+////            button.setHintTextColor(0x0F0F0F);
+//                //       button.setBackgroundColor( 0x666666 );
+//                button.setOnClickListener(new View.OnClickListener() {
+//                    public void onClick(View v) {
+////                marker.setIcon(bd);
+//                        baiduMap.hideInfoWindow();
+//                    }
+//                });
+//                double leftDownTp = Double.valueOf(tp1[5]);
+//                double rightUpTp = Double.valueOf(tp1[6]);
+//                //get location from Data packet;
+//                //waiting for modify...
+//                LatLng ll = new LatLng(leftDownTp, rightUpTp);
+////                LatLng ll = nodeSet[selectedItem].getPosition();
+//                mInfoWindow = new InfoWindow(button, ll, -47);
+//                baiduMap.showInfoWindow(mInfoWindow);
+//            } else {
+                String info[] = new String[data.size()];
+                AlertDialog.Builder infoDialog = new AlertDialog.Builder(MainActivityV2.this);
+                infoDialog.setTitle("Sensory Data of Every WSN Node");
+                for (int i = 0; i < data.size(); i++) {
+                    Data tpdata = data.get(i);
+                    Log.i(TAG, tpdata.getContent().toString());
+                    String tempData[] = tpdata.getContent().toString().split("\\$+");
 //                info[i]=new String();
-                info[i]=tempData[0];
+                    info[i] = tempData[0];
 //                String tp[] = tempData[0].split("/");
 //                Log.i(TAG, "i:"+i+"; tempData[0]:"+tempData[0].toString()+"; tp:"+tp.length);
 //                Button button = new Button(getApplicationContext());
@@ -177,11 +209,10 @@ public class MainActivityV2 extends AppCompatActivity
 //                }
 
 
-            }
-            infoDialog.setItems(info,null);
-            infoDialog.setPositiveButton("OK",null);
-            infoDialog.show();
-
+                }
+                infoDialog.setItems(info, null);
+                infoDialog.setPositiveButton("OK", null);
+                infoDialog.show();
         }
         else if(data.size()==0){
             AlertDialog.Builder infoDialog=new AlertDialog.Builder(MainActivityV2.this);
@@ -193,6 +224,92 @@ public class MainActivityV2 extends AppCompatActivity
 
 
     }
+
+    @Override
+    public void updateUIMobile(HashMap<Integer,Data> data) {
+        Log.i(TAG, "updateUIMobile: ready to update UI Mobile");
+
+        if (data.size()==1) {
+            Log.i(TAG, data.get(0).getContent().toString());
+            String tempData[] = data.get(0).getContent().toString().split("\\$+");
+            String tp1[] = tempData[0].split("/");
+//            String tp2[];
+
+            if(tempData.length<=1) {
+                //add new marker of mobile phone
+                MarkerOptions tempMarker= new MarkerOptions();
+                LatLng tempPoint=new LatLng(Double.valueOf(tp1[1]),Double.valueOf(tp1[2]));
+                BitmapDescriptor bitmap = BitmapDescriptorFactory.fromResource(R.drawable.mobilephone_64x64);
+                tempMarker.position(tempPoint).icon(bitmap);
+                //set marker option extro info of relative position
+                Bundle tempBundle=new Bundle();
+                double tpKey=Double.valueOf(String.valueOf(tp1[0]));
+                double tempD[]={tpKey, tempPoint.latitude, tempPoint.longitude};
+                tempBundle.putDoubleArray("rl", tempD);
+                tempMarker.extraInfo(tempBundle);
+                baiduMap.addOverlay(tempMarker);
+                baiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(new MapStatus.Builder().zoom(19).build()));
+                //add button to show data value
+                Button button = new Button(getApplicationContext());
+                button.setBackgroundResource(R.drawable.popup2);
+                InfoWindow.OnInfoWindowClickListener listener = null;
+                button.setText(tp1[3] + ": " + tp1[4]);
+
+
+//            button.setTextColor(0x0F0F0F);
+//            button.setHintTextColor(0x0F0F0F);
+                //       button.setBackgroundColor( 0x666666 );
+                button.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+//                marker.setIcon(bd);
+                        baiduMap.hideInfoWindow();
+                    }
+                });
+                LatLng ll = tempMarker.getPosition();
+                mInfoWindow = new InfoWindow(button, ll, -47);
+                baiduMap.showInfoWindow(mInfoWindow);
+            }
+            else {
+                AlertDialog.Builder infoDialog= new AlertDialog.Builder(MainActivityV2.this);
+                infoDialog.setTitle("Sensory Data of Selected Node");
+                infoDialog.setItems(tempData,null);
+                infoDialog.setPositiveButton("OK",null);
+                infoDialog.show();
+            }
+
+        }
+
+
+        else if (data.size()>1) {
+            String info[] = new String[data.size()];
+            AlertDialog.Builder infoDialog = new AlertDialog.Builder(MainActivityV2.this);
+            infoDialog.setTitle("Sensory Data of Every WSN Node");
+            for (int i = 0; i < data.size(); i++) {
+                Data tpdata = data.get(i);
+                Log.i(TAG, tpdata.getContent().toString());
+                String tempData[] = tpdata.getContent().toString().split("\\$+");
+//                info[i]=new String();
+                info[i] = tempData[0];
+
+
+            }
+            infoDialog.setItems(info, null);
+            infoDialog.setPositiveButton("OK", null);
+            infoDialog.show();
+        }
+        else if(data.size()==0){
+            AlertDialog.Builder infoDialog=new AlertDialog.Builder(MainActivityV2.this);
+            infoDialog.setTitle("Failed!")
+                    .setPositiveButton("OK",null)
+                    .setMessage("There is no Data come back from sensor device!")
+                    .show();
+        }
+
+
+    }
+
+
+
 
     @Override
     public void refreshUI(HashMap<Integer,WSNLocation> location, HashMap<Integer,Integer> topo,HashMap<Integer,WiFiLocation> locationMobile, HashMap<Integer,Integer> topoMobile,String type){
@@ -432,32 +549,34 @@ public class MainActivityV2 extends AppCompatActivity
                                         //dialog.dismiss();
                                         if (which == 0) {
                                             Bundle tempB = arg0.getExtraInfo();
-                                            int id[] = tempB.getIntArray("rl");
-                                            selectedItem=id[0];
+                                            double id[] = tempB.getDoubleArray("rl");
+                                            //set selected market
+                                            selectedItem=(int)id[0];
                                             Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
                                             HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
-                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"temp"));
+                                            tempHashMap.put((int)id[0], new WSNLocation((int)id[1], (int)id[2],"temp"));
                                             new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
 
                                         } else if (which == 1) {
                                             Bundle tempB = arg0.getExtraInfo();
-                                            int id[] = tempB.getIntArray("rl");
-                                            selectedItem=id[0];
-                                            Log.i(TAG, "2_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+                                            double id[] = tempB.getDoubleArray("rl");
+                                            //set selected market
+                                            selectedItem=(int)id[0];
+                                            Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
                                             HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
-                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"light"));
+                                            tempHashMap.put((int)id[0], new WSNLocation((int)id[1], (int)id[2],"light"));
                                             new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
 
                                         } else if (which == 2) {
                                             Bundle tempB = arg0.getExtraInfo();
-                                            int id[] = tempB.getIntArray("rl");
-                                            selectedItem=id[0];
-                                            Log.i(TAG, "3_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
+                                            double id[] = tempB.getDoubleArray("rl");
+                                            //set selected market
+                                            selectedItem=(int)id[0];
+                                            Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
                                             HashMap<Integer, WSNLocation> tempHashMap = new HashMap<Integer, WSNLocation>();
-                                            tempHashMap.put(id[0], new WSNLocation(id[1], id[2],"humidity"));
-//                                                new SendInterestTask().execute(tempHashMap);
+                                            tempHashMap.put((int)id[0], new WSNLocation((int)id[1], (int)id[2],"humidity"));
                                             new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
                                         } else {
                                             Log.i(TAG, "onClick: type is null");
@@ -556,6 +675,11 @@ public class MainActivityV2 extends AppCompatActivity
 
 
 //        mLocationClient.stop();
+
+
+
+        //reconnect to a NDN-IoT gateway and restart binding NDN_service;
+
     }
 
 
@@ -695,25 +819,29 @@ public class MainActivityV2 extends AppCompatActivity
             nodeSet[i].position(new LatLng(latitude,longitude)).icon(bitmap);
             //set marker option extro info of relative position
             Bundle tempBundle=new Bundle();
-            int tempD[]={(int)entry.getKey(), tempWSNLocationEntry.getLatitude(), tempWSNLocationEntry.getLongitude()};
-            tempBundle.putIntArray("rl",tempD);
+            double tpKey=Double.valueOf(String.valueOf(entry.getKey()));
+            double tpLat=Double.valueOf(String.valueOf(tempWSNLocationEntry.getLatitude()));
+            double tpLng=Double.valueOf(String.valueOf(tempWSNLocationEntry.getLongitude()));
+            double tempD[]={tpKey,tpLat, tpLng};
+            tempBundle.putDoubleArray("rl",tempD);
             nodeSet[i].extraInfo(tempBundle);
             baiduMap.addOverlay(nodeSet[i]);
             baiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(new MapStatus.Builder().zoom(19).build()));
         }
         while(iteratorMobile.hasNext()) {
-            Map.Entry entry = (Map.Entry) iterator.next();
+            Map.Entry entry = (Map.Entry) iteratorMobile.next();
             WiFiLocation tempWiFiLocationEntry =(WiFiLocation) entry.getValue();
-            double latitude=tempWiFiLocationEntry.getPoint().latitude;
-            double longitude=tempWiFiLocationEntry.getPoint().longitude;
+//            double latitude=tempWiFiLocationEntry.getPoint().latitude;
+//            double longitude=tempWiFiLocationEntry.getPoint().longitude;
             Log.i(TAG, "nodeSet["+entry.getKey()+"] start initiate...");
             int i=(int)entry.getKey();
             nodeSet[i] = new MarkerOptions();
-            BitmapDescriptor bitmap = BitmapDescriptorFactory.fromResource(R.drawable.MobilePhone);
-            nodeSet[i].position(new LatLng(latitude,longitude)).icon(bitmap);
+            BitmapDescriptor bitmap = BitmapDescriptorFactory.fromResource(R.drawable.mobilephone_64x64);
+            nodeSet[i].position(tempWiFiLocationEntry.getPoint()).icon(bitmap);
             //set marker option extro info of relative position
             Bundle tempBundle=new Bundle();
-            double tempD[]={(Double) entry.getKey(), tempWiFiLocationEntry.getPoint().latitude, tempWiFiLocationEntry.getPoint().longitude};
+            double tpKey=Double.valueOf(String.valueOf(entry.getKey()));
+            double tempD[]={tpKey, tempWiFiLocationEntry.getPoint().latitude, tempWiFiLocationEntry.getPoint().longitude};
             tempBundle.putDoubleArray("rl", tempD);
             nodeSet[i].extraInfo(tempBundle);
             baiduMap.addOverlay(nodeSet[i]);
@@ -734,17 +862,18 @@ public class MainActivityV2 extends AppCompatActivity
     public void initiateTopo(HashMap<Integer,Integer> Base,HashMap<Integer,Integer> BaseMobile){
         //show topo here waiting for finishing later        ...
         Polyline mPolyline;
-
+        Log.i(TAG, "initiateTopo...");
         for(int i=0;i<nodeSet.length;i++){
             if(nodeSet[i]!=null){
                 Bundle tempB=nodeSet[i].getExtraInfo();
-                int id[] = tempB.getIntArray("rl");
+                double id[] = tempB.getDoubleArray("rl");
                 LatLng p1 =nodeSet[i].getPosition();
-                if(Base.get(id[0])==null&&BaseMobile.get(id[0])==null) {
+                int tpID=(int)id[0];
+                if(Base.get(tpID)==null&&BaseMobile.get(tpID)==null) {
                     continue;
                 }
-                if(Base.get(id[0])!=null) {
-                    LatLng p2 = nodeSet[Base.get(id[0])].getPosition();
+                if(Base.get(tpID)!=null) {
+                    LatLng p2 = nodeSet[Base.get(tpID)].getPosition();
                     List<LatLng> points = new ArrayList<LatLng>();
                     points.add(p1);
                     points.add(p2);
@@ -752,8 +881,8 @@ public class MainActivityV2 extends AppCompatActivity
                             .color(0xAA000000).points(points);
                     mPolyline = (Polyline) baiduMap.addOverlay(ooPolyline);
                 }
-                if(BaseMobile.get(id[0])!=null){
-                    LatLng p2 = nodeSet[BaseMobile.get(id[0])].getPosition();
+                if(BaseMobile.get(tpID)!=null){
+                    LatLng p2 = nodeSet[1].getPosition();
                     List<LatLng> points = new ArrayList<LatLng>();
                     points.add(p1);
                     points.add(p2);
@@ -967,23 +1096,32 @@ public class MainActivityV2 extends AppCompatActivity
 //                                        selectedItem=id[0];
 //                                        Log.i(TAG, "1_onClick: type is " + Items[which] + ". ID is " + id[0] + "Relative position is:" + id[1] + "," + id[2]);
                                         HashMap<Integer, WSNLocation> tempHashMap =new HashMap<>();
-                                        LatLng leftDown=getSite(1);
-                                        String tpLDLat[]=Double.toString(leftDown.latitude).split("\\.");
-                                        String tpLDLng[]=Double.toString(leftDown.longitude).split("\\.");
-                                        LatLng rightUp=getSite(4);
-                                        String tpRULat[]=Double.toString(rightUp.latitude).split("\\.");
-                                        String tpRULng[]=Double.toString(rightUp.longitude).split("\\.");
+                                        //get location of selected area on the map
+                                        LatLng leftDown=getSite(2);
+//                                        String tpLDLat[]=Double.toString(leftDown.latitude).split("\\.");
+//                                        String tpLDLng[]=Double.toString(leftDown.longitude).split("\\.");
+                                        LatLng rightUp=getSite(3);
+//                                        String tpRULat[]=Double.toString(rightUp.latitude).split("\\.");
+//                                        String tpRULng[]=Double.toString(rightUp.longitude).split("\\.");
                                         String dataType="temp";
-                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(2,6)),
-                                                Integer.valueOf(tpLDLng[1].substring(2,6)),
-                                                Integer.valueOf(tpRULat[1].substring(2,6)),
-                                                Integer.valueOf(tpRULng[1].substring(2,6)),
-                                                dataType);
+
+//                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(2,6)),
+//                                                Integer.valueOf(tpLDLng[1].substring(2,6)),
+//                                                Integer.valueOf(tpRULat[1].substring(2,6)),
+//                                                Integer.valueOf(tpRULng[1].substring(2,6)),
+//                                                dataType);
+                                        WSNLocation tempWSNArea=new WSNLocation(leftDown,rightUp,dataType);
                                         //HashMap<Integer,WSNLocation> tempHashMap=new HashMap();
                                         tempHashMap.put(1000,tempWSNArea);
+                                        //send a area Interest into WSN by set tempHashMap[1000]!=null
 
                                         new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
-
+                                        //constructs a mobile Interest for WiFi
+                                        HashMap<Integer, WiFiLocation> tempHashMapMobile=new HashMap<>();
+                                        WiFiLocation tempWiFiArea=new WiFiLocation(leftDown,rightUp,"area",dataType);
+                                        tempHashMapMobile.put(1000,tempWiFiArea);
+                                        //send a area Interest into WiFi by set tempHashMap[1000]!=null
+                                        new SendWiFiInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMapMobile);
 
                                     } else if (which == 1) {
 //                                        Bundle tempB = arg0.getExtraInfo();
@@ -995,22 +1133,31 @@ public class MainActivityV2 extends AppCompatActivity
 //                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 //
                                         HashMap<Integer, WSNLocation> tempHashMap =new HashMap<>();
-                                        LatLng leftDown=getSite(1);
-                                        String tpLDLat[]=Double.toString(leftDown.latitude).split("\\.");
-                                        String tpLDLng[]=Double.toString(leftDown.longitude).split("\\.");
-                                        LatLng rightUp=getSite(4);
-                                        String tpRULat[]=Double.toString(rightUp.latitude).split("\\.");
-                                        String tpRULng[]=Double.toString(rightUp.longitude).split("\\.");
+                                        LatLng leftDown=getSite(2);
+//                                        String tpLDLat[]=Double.toString(leftDown.latitude).split("\\.");
+//                                        String tpLDLng[]=Double.toString(leftDown.longitude).split("\\.");
+                                        LatLng rightUp=getSite(3);
+//                                        String tpRULat[]=Double.toString(rightUp.latitude).split("\\.");
+//                                        String tpRULng[]=Double.toString(rightUp.longitude).split("\\.");
                                         String dataType="light";
-                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(2,6)),
-                                                Integer.valueOf(tpLDLng[1].substring(2,6)),
-                                                Integer.valueOf(tpRULat[1].substring(2,6)),
-                                                Integer.valueOf(tpRULng[1].substring(2,6)),
-                                                dataType);
+
+//                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(2,6)),
+//                                                Integer.valueOf(tpLDLng[1].substring(2,6)),
+//                                                Integer.valueOf(tpRULat[1].substring(2,6)),
+//                                                Integer.valueOf(tpRULng[1].substring(2,6)),
+//                                                dataType);
+                                        WSNLocation tempWSNArea=new WSNLocation(leftDown,rightUp,dataType);
                                         //HashMap<Integer,WSNLocation> tempHashMap=new HashMap();
                                         tempHashMap.put(1000,tempWSNArea);
 
                                         new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+                                        //constructs a mobile Interest for WiFi
+                                        HashMap<Integer, WiFiLocation> tempHashMapMobile=new HashMap<>();
+                                        WiFiLocation tempWiFiArea=new WiFiLocation(leftDown,rightUp,"area",dataType);
+                                        tempHashMapMobile.put(1000,tempWiFiArea);
+                                        //send a area Interest into WiFi by set tempHashMap[1000]!=null
+                                        new SendWiFiInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMapMobile);
+
 
                                     } else if (which == 2) {
 //                                        Bundle tempB = arg0.getExtraInfo();
@@ -1023,22 +1170,33 @@ public class MainActivityV2 extends AppCompatActivity
 //                                        new SendInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
 
                                         HashMap<Integer, WSNLocation> tempHashMap =new HashMap<>();
-                                        LatLng leftDown=getSite(1);
-                                        String tpLDLat[]=Double.toString(leftDown.latitude).split("\\.");
-                                        String tpLDLng[]=Double.toString(leftDown.longitude).split("\\.");
-                                        LatLng rightUp=getSite(4);
-                                        String tpRULat[]=Double.toString(rightUp.latitude).split("\\.");
-                                        String tpRULng[]=Double.toString(rightUp.longitude).split("\\.");
+                                        LatLng leftDown=getSite(2);
+//                                        String tpLDLat[]=Double.toString(leftDown.latitude).split("\\.");
+//                                        String tpLDLng[]=Double.toString(leftDown.longitude).split("\\.");
+                                        LatLng rightUp=getSite(3);
+//                                        String tpRULat[]=Double.toString(rightUp.latitude).split("\\.");
+//                                        String tpRULng[]=Double.toString(rightUp.longitude).split("\\.");
                                         String dataType="humidity";
-                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(2,6)),
-                                                Integer.valueOf(tpLDLng[1].substring(2,6)),
-                                                Integer.valueOf(tpRULat[1].substring(2,6)),
-                                                Integer.valueOf(tpRULng[1].substring(2,6)),
-                                                dataType);
+
+//                                        WSNLocation tempWSNArea=new WSNLocation(Integer.valueOf(tpLDLat[1].substring(2,6)),
+//                                                Integer.valueOf(tpLDLng[1].substring(2,6)),
+//                                                Integer.valueOf(tpRULat[1].substring(2,6)),
+//                                                Integer.valueOf(tpRULng[1].substring(2,6)),
+//                                                dataType);
+                                        WSNLocation tempWSNArea=new WSNLocation(leftDown,rightUp,dataType);
                                         //HashMap<Integer,WSNLocation> tempHashMap=new HashMap();
                                         tempHashMap.put(1000,tempWSNArea);
 
                                         new SendWSNInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMap);
+//                                      There is no humidity sensor on mobile phone
+//                                        //constructs a mobile Interest for WiFi
+//                                        HashMap<Integer, WiFiLocation> tempHashMapMobile=new HashMap<>();
+//                                        WiFiLocation tempWiFiArea=new WiFiLocation(leftDown,rightUp,dataType);
+//                                        tempHashMapMobile.put(1000,tempWiFiArea);
+//                                        //send a area Interest into WiFi by set tempHashMap[1000]!=null
+//                                        new SendWiFiInterestTask(MainActivityV2.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,tempHashMapMobile);
+
+
                                     } else {
                                         Log.i(TAG, "onClick: type is null");
                                     }
@@ -1117,16 +1275,16 @@ public class MainActivityV2 extends AppCompatActivity
             do{
                 tagOfBind=serviceBinder.startBind(userName,latLng,serverAddress);
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(10000);
                 }
                 catch (Exception e){
                     e.printStackTrace();
                 }
                 tryTime++;
 
-            } while(tagOfBind!=true&&tryTime<10);
-            if (tryTime>=10){
-                Log.i(TAG, "onServiceConnected: failed... try to tart app again!");
+            } while(tagOfBind!=true&&tryTime<1);
+            if (tryTime>=2 ){
+                Log.i(TAG, "onServiceConnected: failed...tagofBind:"+tagOfBind+", tryTime:"+tryTime+"try to tart app again!");
                 return ;
             }
             Log.i(TAG, "NDN service initiate successful but wait for updata UI in main activity...");
@@ -1135,9 +1293,12 @@ public class MainActivityV2 extends AppCompatActivity
             topoBase = serviceBinder.getTopoBase();
             Log.i(TAG, "get topoBase from NDN service size is "+topoBase.size());
             locationBaseMobile = serviceBinder.getLocationBaseMobile();
-            Log.i(TAG, "get locationBase from NDN service size is "+locationBaseMobile.size());
+            Log.i(TAG, "get locationBaseMobile from NDN service size is "+locationBaseMobile.size());
             topoBaseMobile = serviceBinder.getTopoBaseMobile();
-            Log.i(TAG, "get topoBase from NDN service size is "+topoBaseMobile.size());
+            Log.i(TAG, "get topoBaseMobile from NDN service size is "+topoBaseMobile.size());
+
+            gatewayArea=serviceBinder.getGatewayArea();
+            Log.i(TAG, "get service Area of gateway from NDN service, SA is :"+gatewayArea.getLeftDown().toString()+gatewayArea.getRightUp().toString());
 
             initiateLocation(locationBase,locationBaseMobile);
             initiateTopo(topoBase,topoBaseMobile);

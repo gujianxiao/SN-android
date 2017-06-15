@@ -24,6 +24,10 @@
 
     <!-- 访问网络，网络定位需要上网 -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 访问WiFi网络，接入WiFi连接 -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- 切换WiFi网络，切换WiFi连接 -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
     <supports-screens
         android:anyDensity="true"
